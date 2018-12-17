@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="theme-color" content="#ffffff">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+        }
+
+        .menuDiv {
+            background-color: #505050;
+            font-size: 20px;
+            height: 40px;
+        }
+
+        .menuDiv a,
+        .menuDiv p {
+            float: left;
+            display: block;
+            text-decoration: none;
+            color: #FFFFFF;
+            text-align: center;
+            vertical-align: middle;
+            line-height: 40px;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        .menuDiv svg {
+            float: right;
+            display: block;
+            fill: #FFFFFF;
+            padding-left: 10px;
+            padding-right: 10px;
+            width: 60px;
+            height: 40px;
+        }
+
+        .menuDiv a,
+        .menuDiv svg {
+            background-color: #505050;
+        }
+
+        .menuDiv p {
+            background-color: #037700;
+        }
+
+        .menuDiv .selectedMenu,
+        .menuDiv a:hover,
+        .menuDiv svg:hover {
+            background-color: #101010;
+        }
+
+        .controlDiv {
+            background-color: #707070;
+            height: 40px;
+        }
+
+        .controlDiv select,
+        .controlDiv button {
+            float: left;
+            display: block;
+            font-size: 15px;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #101010;
+            border-radius: 5px;
+            height: 40px;
+        }
+
+        #folderList {
+            width: 150px;
+        }
+
+        #fileList {
+            width: 250px;
+        }
+
+        .controlDiv button {
+            color: #000000;
+            background-color: #D0D0D0;
+            width: 100px;
+        }
+
+        .controlDiv button:disabled {
+            color: #A0A0A0;
+        }
+
+        .controlDiv button:enabled:active {
+            background-color: #A0A0A0;
+        }
+
+        .controlDiv .controls {
+            float: left;
+            display: inline;
+        }
+
+        .contentDiv {
+            height: calc(100% - 80px);
+        }
+
+        .contentDiv video {
+            visibility: hidden;
+            display: block;
+            margin: auto;
+            border-style: solid;
+            border-width: 2px;
+            border-color: #000000;
+            width: 100%;
+            height: 100%;
+        }
+
+        @media screen and (max-width: 600px) {
+            .controlDiv {
+                height: 120px;
+            }
+            #folderList,
+            #fileList,
+            .controlDiv .controls {
+                float: none;
+                width: 100%;
+            }
+            .controlDiv button {
+                width: 50%;
+            }
+            .contentDiv {
+                height: calc(100% - 160px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="menuDiv">
+        <p id="title">Loading</p>
+        <a href="/live.html">Live</a>
+        <a class="selectedMenu" href="/history.html">History</a>
+        <svg id="download" viewBox="0 0 24 24">
+            <path d="M0 0h24v24H0z" fill="none" />
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
+        </svg>
+    </div>
+    <div class="controlDiv">
+        <select id="folderList" disabled>
+            <option value="" disabled selected>Select the day</option>
+        </select>
+        <select id="fileList" disabled>
+            <option value="" disabled selected>Select the file</option>
+        </select>
+        <div class="controls">
+            <button type="button" id="prevButton" disabled>&lt; Prev</button>
+            <button type="button" id="nextButton" disabled>Next &gt;</button>
+        </div>
+    </div>
+    <div id="contentDiv" class="contentDiv">
+        <video id="video" controls autoplay playsinline>Your browser does not support the video tag</video>
+    </div>
+
+    <script>
+        var width = 320;
+        var height = 240;
+        var folderRequest = new XMLHttpRequest();
+        var fileRequest = new XMLHttpRequest();
+
+        function updateLayout() {
+            var elem = document.getElementById("contentDiv");
+            var ratio = Math.min(elem.getBoundingClientRect().width / width, elem.getBoundingClientRect().height / height);
+            document.getElementById("video").style.width = Math.floor(ratio * width) + "px";
+            document.getElementById("video").style.height = Math.floor(ratio * height) + "px";
+        };
+
+        function loadFolders() {
+            folderRequest.abort();
+            folderRequest = new XMLHttpRequest();
+            folderRequest.onload = function() {
+                if (folderRequest.status == 200) {
+                    var selectList = document.getElementById("fileList");
+                    while (selectList.length > 1) {
+                        selectList.removeChild(selectList.lastChild);
+                    }
+                    selectList.selectedIndex = 0;
+                    selectList.disabled = true;
+
+                    document.getElementById("prevButton").disabled = true;
+                    document.getElementById("nextButton").disabled = true;
+
+                    var video = document.getElementById("video");
+                    video.pause();
+                    video.removeAttribute("src");
+                    video.removeAttribute("type");
+                    video.load();
+                    video.style.visibility = "hidden";
+
+                    selectList = document.getElementById("folderList");
+                    while (selectList.length > 1) {
+                        selectList.removeChild(selectList.lastChild);
+                    }
+                    var json = JSON.parse(folderRequest.responseText);
+                    var folders = json.folders || [];
+                    for (var i = 0; i < folders.length && folders[i]; i++) {
+                        var option = document.createElement("option");
+                        option.value = folders[i];
+                        option.text = folders[i];
+                        selectList.appendChild(option);
+                    }
+                    selectList.selectedIndex = 0;
+                    selectList.disabled = false;
+                }
+            };
+            folderRequest.open("GET", "/data/folderList", true);
+            folderRequest.send();
+        };
+
+        function loadFiles() {
+            fileRequest.abort();
+            if (document.getElementById("folderList").selectedIndex > 0) {
+                var folder = document.getElementById("folderList").value;
+                fileRequest = new XMLHttpRequest();
+                fileRequest.onload = function() {
+                    if (fileRequest.status == 200) {
+                        var video = document.getElementById("video");
+                        video.pause();
+                        video.removeAttribute("src");
+                        video.removeAttribute("type");
+                        video.load();
+                        video.style.visibility = "hidden";
+
+                        var selectList = document.getElementById("fileList");
+                        while (selectList.length > 1) {
+                            selectList.removeChild(selectList.lastChild);
+                        }
+                        var json = JSON.parse(fileRequest.responseText);
+                        var files = json.files || [];
+                        for (var i = 0; i < files.length && files[i]; i++) {
+                            var option = document.createElement("option");
+                            option.value = files[i];
+                            option.text = files[i];
+                            selectList.appendChild(option);
+                        }
+                        selectList.selectedIndex = 0;
+                        selectList.disabled = false;
+
+                        document.getElementById("prevButton").disabled = false;
+                        document.getElementById("nextButton").disabled = false;
+                    }
+                };
+                fileRequest.open("GET", "/data/fileList?folder=" + folder, true);
+                fileRequest.send();
+            }
+        };
+
+        function loadVideo() {
+            if (document.getElementById("folderList").selectedIndex > 0) {
+                var folder = document.getElementById("folderList").value;
+                if (document.getElementById("fileList").selectedIndex > 0) {
+                    var file = document.getElementById("fileList").value;
+                    var video = document.getElementById("video");
+                    video.style.visibility = "visible";
+                    video.pause();
+                    video.setAttribute("src", "/data/file?folder=" + folder + "&file=" + file);
+                    video.setAttribute("type", "video/mp4");
+                    video.load();
+                }
+            }
+        };
+
+        function prevFile() {
+            var selectList = document.getElementById("fileList");
+            if (selectList.selectedIndex > 1) {
+                selectList.selectedIndex = selectList.selectedIndex - 1;
+                loadVideo();
+            }
+        };
+
+        function nextFile() {
+            var selectList = document.getElementById("fileList");
+            if (selectList.selectedIndex < selectList.length - 1) {
+                selectList.selectedIndex = selectList.selectedIndex + 1;
+                loadVideo();
+            }
+        };
+
+        function download() {
+            if (document.getElementById("folderList").selectedIndex > 0) {
+                var folder = document.getElementById("folderList").value;
+                if (document.getElementById("fileList").selectedIndex > 0) {
+                    var file = document.getElementById("fileList").value;
+                    var a = document.createElement("a");
+                    a.setAttribute("download", file);
+                    a.setAttribute("href", "/data/file?folder=" + folder + "&file=" + file);
+                    a.click();
+                }
+            }
+        };
+
+        function initalize() {
+            var initRequest = new XMLHttpRequest();
+            initRequest.onload = function() {
+                if (initRequest.status == 200) {
+                    var json = JSON.parse(initRequest.responseText);
+
+                    var title = (json.title || "No name").trim();
+                    if (title.length < 1) title = "No name";
+                    document.title = title;
+                    document.getElementById("title").innerHTML = title;
+
+                    width = json.historyWidth || 64;
+                    if (isNaN(width)) width = 64;
+                    if (width < 64) width = 64;
+                    if (width > 10000) width = 10000;
+
+                    height = json.historyHeight || 64;
+                    if (isNaN(height)) height = 64;
+                    if (height < 64) height = 64;
+                    if (height > 10000) height = 10000;
+
+                    window.addEventListener("resize", updateLayout);
+                    updateLayout();
+                    loadFolders();
+                    document.getElementById("folderList").addEventListener("change", loadFiles);
+                    document.getElementById("fileList").addEventListener("change", loadVideo);
+                    document.getElementById("prevButton").addEventListener("click", prevFile);
+                    document.getElementById("nextButton").addEventListener("click", nextFile);
+                    document.getElementById("video").addEventListener("ended", nextFile);
+                    document.getElementById("download").addEventListener("click", download);
+                }
+            };
+            initRequest.open("GET", "/data/config", true);
+            initRequest.send();
+        };
+
+        initalize();
+    </script>
+</body>
+
+</html>

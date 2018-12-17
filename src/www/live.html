@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="theme-color" content="#ffffff">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+        }
+
+        .menuDiv {
+            background-color: #505050;
+            font-size: 20px;
+            height: 40px;
+        }
+
+        .menuDiv a,
+        .menuDiv p {
+            float: left;
+            display: block;
+            text-decoration: none;
+            color: #FFFFFF;
+            text-align: center;
+            vertical-align: middle;
+            line-height: 40px;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        .menuDiv svg {
+            float: right;
+            display: block;
+            fill: #FFFFFF;
+            padding-left: 10px;
+            padding-right: 10px;
+            width: 60px;
+            height: 40px;
+        }
+
+        .menuDiv a,
+        .menuDiv svg {
+            background-color: #505050;
+        }
+
+        .menuDiv p {
+            background-color: #037700;
+        }
+
+        .menuDiv .selectedMenu,
+        .menuDiv a:hover,
+        .menuDiv svg:hover {
+            background-color: #101010;
+        }
+
+        .contentDiv {
+            height: calc(100% - 40px);
+        }
+
+        .contentDiv canvas {
+            visibility: hidden;
+            display: block;
+            margin: auto;
+            border-style: solid;
+            border-width: 2px;
+            border-color: #000000;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="menuDiv">
+        <p id="title">Loading</p>
+        <a class="selectedMenu" href="/live.html">Live</a>
+        <a href="/history.html">History</a>
+        <svg id="download" viewBox="0 0 24 24">
+            <path d="M0 0h24v24H0z" fill="none" />
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
+        </svg>
+    </div>
+    <div id="contentDiv" class="contentDiv">
+        <canvas id="canvas">Your browser does not support the canvas tag</canvas>
+    </div>
+
+    <script>
+        var frameDelay = 1000;
+        var width = 320;
+        var height = 240;
+        var img = new Image();
+        var imgTime = performance.now();
+
+        function updateLayout() {
+            var elem = document.getElementById("contentDiv");
+            var ratio = Math.min(elem.getBoundingClientRect().width / width, elem.getBoundingClientRect().height / height);
+            document.getElementById("canvas").style.width = Math.floor(ratio * width) + "px";
+            document.getElementById("canvas").style.height = Math.floor(ratio * height) + "px";
+        };
+
+        function refreshImage() {
+            imgTime = performance.now();
+            img.src = "/data/frame?t=" + imgTime;
+        };
+
+        function scheduleRefreshImage() {
+            var now = performance.now();
+            var delay = frameDelay - (now - imgTime);
+            imgTime = now;
+            if (delay < 1) delay = 1;
+            if (delay > 1000) delay = 1000;
+            setTimeout(refreshImage, delay);
+        };
+
+        function drawTextCanvas(text, color) {
+            var ctx = document.getElementById("canvas").getContext("2d");
+            ctx.fillStyle = "#808080";
+            ctx.fillRect(0, 0, width, height);
+            if (text && text.length > 0) {
+                ctx.font = "100px Arial";
+                ctx.font = Math.min(Math.floor(width / ctx.measureText(text).width * 90), 35) + "px Arial";
+                ctx.fillStyle = color;
+                ctx.textAlign = "center";
+                ctx.fillText(text, width / 2, height / 2);
+            }
+        };
+
+        img.onload = function() {
+            var ctx = document.getElementById("canvas").getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            scheduleRefreshImage();
+        };
+
+        img.onerror = function() {
+            drawTextCanvas("OFFLINE", "#FF0000");
+            scheduleRefreshImage();
+        };
+
+        function download() {
+            var a = document.createElement("a");
+            a.setAttribute("download", "Frame_" + Date.now() + ".jpeg");
+            a.setAttribute("href", "/data/frame");
+            a.click();
+        };
+
+        function initalize() {
+            var initRequest = new XMLHttpRequest();
+            initRequest.onload = function() {
+                if (initRequest.status == 200) {
+                    var json = JSON.parse(initRequest.responseText);
+
+                    var title = (json.title || "No name").trim();
+                    if (title.length < 1) title = "No name";
+                    document.title = title;
+                    document.getElementById("title").innerHTML = title;
+
+                    width = json.liveWidth || 64;
+                    if (isNaN(width)) width = 64;
+                    if (width < 64) width = 64;
+                    if (width > 10000) width = 10000;
+                    document.getElementById("canvas").width = width;
+
+                    height = json.liveHeight || 64;
+                    if (isNaN(height)) height = 64;
+                    if (height < 64) height = 64;
+                    if (height > 10000) height = 10000;
+                    document.getElementById("canvas").height = height;
+
+                    frameDelay = 1000 / (json.liveFrameRate || 1);
+                    if (isNaN(frameDelay)) frameDelay = 1000;
+                    if (frameDelay < 1) frameDelay = 1;
+                    if (frameDelay > 1000) frameDelay = 1000;
+
+                    window.addEventListener("resize", updateLayout);
+                    updateLayout();
+                    document.getElementById("canvas").style.visibility = "visible";
+                    drawTextCanvas("Loading", "#000000");
+                    refreshImage();
+                    document.getElementById("download").addEventListener("click", download);
+                }
+            };
+            initRequest.open("GET", "/data/config", true);
+            initRequest.send();
+        };
+
+        initalize();
+    </script>
+</body>
+
+</html>
