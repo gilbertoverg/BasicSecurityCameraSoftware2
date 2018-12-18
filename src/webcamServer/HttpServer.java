@@ -156,74 +156,74 @@ public class HttpServer extends NanoHTTPD {
 			String etag = Integer.toHexString((file.getAbsolutePath() + file.lastModified() + file.length()).hashCode());
 			
 			long startFrom = 0;
-            long endAt = -1;
-            String range = session.getHeaders().get("range");
-            if(range != null) {
-                if(range.startsWith("bytes=")) {
-                    range = range.substring(6);
-                    int minus = range.indexOf('-');
-                    try {
-                        if(minus > 0) {
-                            startFrom = Long.parseLong(range.substring(0, minus));
-                            endAt = Long.parseLong(range.substring(minus + 1));
-                        }
-                    } catch (NumberFormatException e) {
-                    	
-                    }
-                }
-            }
-            
-            String ifRange = session.getHeaders().get("if-range");
-            boolean headerIfRangeMissingOrMatching = ifRange == null || etag.equals(ifRange);
-            
-            String ifNoneMatch = session.getHeaders().get("if-none-match");
-            boolean headerIfNoneMatchPresentAndMatching = ifNoneMatch != null && ("*".equals(ifNoneMatch) || ifNoneMatch.equals(etag));
-            
-            long fileLen = file.length();
-            
-            if(headerIfRangeMissingOrMatching && range != null && startFrom >= 0 && startFrom < fileLen) {
-                if(headerIfNoneMatchPresentAndMatching) {
-                    res = Response.newFixedLengthResponse(Status.NOT_MODIFIED, mime, "");
-                    res.addHeader("ETag", etag);
-                }
-                else {
-                    if(endAt < 0) endAt = fileLen - 1;
-                    long newLen = endAt - startFrom + 1;
-                    if(newLen < 0) newLen = 0;
-
-                    FileInputStream fis = new FileInputStream(file);
-                    fis.skip(startFrom);
-
-                    res = Response.newFixedLengthResponse(Status.PARTIAL_CONTENT, mime, fis, newLen);
-                    res.addHeader("Accept-Ranges", "bytes");
-                    res.addHeader("Content-Length", Long.toString(newLen));
-                    res.addHeader("Content-Range", "bytes " + startFrom + "-" + endAt + "/" + fileLen);
-                    res.addHeader("ETag", etag);
-                }
-            }
-            else {
-                if(headerIfRangeMissingOrMatching && range != null && startFrom >= fileLen) {
-                    res = Response.newFixedLengthResponse(Status.RANGE_NOT_SATISFIABLE, NanoHTTPD.MIME_PLAINTEXT, "");
-                    res.addHeader("Content-Range", "bytes */" + fileLen);
-                    res.addHeader("ETag", etag);
-                }
-                else if(range == null && headerIfNoneMatchPresentAndMatching) {
-                    res = Response.newFixedLengthResponse(Status.NOT_MODIFIED, mime, "");
-                    res.addHeader("ETag", etag);
-                }
-                else if(!headerIfRangeMissingOrMatching && headerIfNoneMatchPresentAndMatching) {
-                    res = Response.newFixedLengthResponse(Status.NOT_MODIFIED, mime, "");
-                    res.addHeader("ETag", etag);
-                }
-                else {
-                	res = Response.newFixedLengthResponse(Status.OK, mime, new FileInputStream(file), (int)file.length());
-                    res.addHeader("Accept-Ranges", "bytes");
-                    res.addHeader("Content-Length", Long.toString(fileLen));
-                    res.addHeader("ETag", etag);
-                }
-            }
-            
-            return res;
+			long endAt = -1;
+			String range = session.getHeaders().get("range");
+			if(range != null) {
+				if(range.startsWith("bytes=")) {
+					range = range.substring(6);
+					int minus = range.indexOf('-');
+					try {
+						if(minus > 0) {
+							startFrom = Long.parseLong(range.substring(0, minus));
+							endAt = Long.parseLong(range.substring(minus + 1));
+						}
+					} catch (NumberFormatException e) {
+						
+					}
+				}
+			}
+			
+			String ifRange = session.getHeaders().get("if-range");
+			boolean headerIfRangeMissingOrMatching = ifRange == null || etag.equals(ifRange);
+			
+			String ifNoneMatch = session.getHeaders().get("if-none-match");
+			boolean headerIfNoneMatchPresentAndMatching = ifNoneMatch != null && ("*".equals(ifNoneMatch) || ifNoneMatch.equals(etag));
+			
+			long fileLen = file.length();
+			
+			if(headerIfRangeMissingOrMatching && range != null && startFrom >= 0 && startFrom < fileLen) {
+				if(headerIfNoneMatchPresentAndMatching) {
+					res = Response.newFixedLengthResponse(Status.NOT_MODIFIED, mime, "");
+					res.addHeader("ETag", etag);
+				}
+				else {
+					if(endAt < 0) endAt = fileLen - 1;
+					long newLen = endAt - startFrom + 1;
+					if(newLen < 0) newLen = 0;
+					
+					FileInputStream fis = new FileInputStream(file);
+					fis.skip(startFrom);
+					
+					res = Response.newFixedLengthResponse(Status.PARTIAL_CONTENT, mime, fis, newLen);
+					res.addHeader("Accept-Ranges", "bytes");
+					res.addHeader("Content-Length", Long.toString(newLen));
+					res.addHeader("Content-Range", "bytes " + startFrom + "-" + endAt + "/" + fileLen);
+					res.addHeader("ETag", etag);
+				}
+			}
+			else {
+				if(headerIfRangeMissingOrMatching && range != null && startFrom >= fileLen) {
+					res = Response.newFixedLengthResponse(Status.RANGE_NOT_SATISFIABLE, NanoHTTPD.MIME_PLAINTEXT, "");
+					res.addHeader("Content-Range", "bytes */" + fileLen);
+					res.addHeader("ETag", etag);
+				}
+				else if(range == null && headerIfNoneMatchPresentAndMatching) {
+					res = Response.newFixedLengthResponse(Status.NOT_MODIFIED, mime, "");
+					res.addHeader("ETag", etag);
+				}
+				else if(!headerIfRangeMissingOrMatching && headerIfNoneMatchPresentAndMatching) {
+					res = Response.newFixedLengthResponse(Status.NOT_MODIFIED, mime, "");
+					res.addHeader("ETag", etag);
+				}
+				else {
+					res = Response.newFixedLengthResponse(Status.OK, mime, new FileInputStream(file), (int)file.length());
+					res.addHeader("Accept-Ranges", "bytes");
+					res.addHeader("Content-Length", Long.toString(fileLen));
+					res.addHeader("ETag", etag);
+				}
+			}
+			
+			return res;
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}
