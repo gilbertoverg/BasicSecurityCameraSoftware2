@@ -41,6 +41,7 @@
             color: #FFFFFF;
             text-align: center;
             vertical-align: middle;
+            height: 100%;
             line-height: 40px;
             padding-left: 10px;
             padding-right: 10px;
@@ -85,6 +86,28 @@
             width: 100%;
             height: 100%;
         }
+
+        @media screen and (max-width: 600px) {
+            .menuDiv {
+                font-size: 15px;
+                height: 30px;
+            }
+            .menuDiv a,
+            .menuDiv p {
+                line-height: 30px;
+                padding-left: 7.5px;
+                padding-right: 7.5px;
+            }
+            .menuDiv svg {
+                padding-left: 7.5px;
+                padding-right: 7.5px;
+                width: 45px;
+                height: 30px;
+            }
+            .contentDiv {
+                height: calc(100% - 30px);
+            }
+        }
     </style>
 </head>
 
@@ -93,6 +116,7 @@
         <p id="title">Loading</p>
         <a class="selectedMenu" href="/live.html">Live</a>
         <a href="/history.html">History</a>
+        <a href="/timeline.html">Timeline</a>
         <svg id="download" viewBox="0 0 24 24">
             <path d="M0 0h24v24H0z" fill="none" />
             <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />

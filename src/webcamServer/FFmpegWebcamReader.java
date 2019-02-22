@@ -41,7 +41,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 			if(fileSegmentDuration < 5 || fileSegmentDuration > 3600) throw new IllegalArgumentException("File segment duration out of range");
 		}
 		if(jpegStream) {
-			if(jpegQuality < 1 || jpegQuality > 31) throw new IllegalArgumentException("Jpeg quality out of range");
+			if(jpegQuality < 2 || jpegQuality > 31) throw new IllegalArgumentException("Jpeg quality out of range");
 			if(jpegWidth < 64 || jpegWidth > 10000) throw new IllegalArgumentException("Jpeg width out of range");
 			if(jpegHeight < 64 || jpegHeight > 10000) throw new IllegalArgumentException("Jpeg height out of range");
 			if(jpegFrameRate < 1 || jpegFrameRate > 60) throw new IllegalArgumentException("Jpeg frame rate out of range");
@@ -156,7 +156,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 		
 		WebcamServer.logger.printLogLn(true, "FFmpeg command: " + Arrays.toString(cmdArray));
 		
-		ffmpegLogMonitor = new FFmpegLogMonitor(15000, 0.75, 15);
+		ffmpegLogMonitor = new FFmpegLogMonitor(30000, 0.75, 15);
 		
 		ffmpegProcess = new FFmpegProcess(cmdArray);
 		ffmpegProcess.setJpegListener(this);

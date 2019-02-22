@@ -41,6 +41,7 @@
             color: #FFFFFF;
             text-align: center;
             vertical-align: middle;
+            height: 100%;
             line-height: 40px;
             padding-left: 10px;
             padding-right: 10px;
@@ -131,6 +132,22 @@
         }
 
         @media screen and (max-width: 600px) {
+            .menuDiv {
+                font-size: 15px;
+                height: 30px;
+            }
+            .menuDiv a,
+            .menuDiv p {
+                line-height: 30px;
+                padding-left: 7.5px;
+                padding-right: 7.5px;
+            }
+            .menuDiv svg {
+                padding-left: 7.5px;
+                padding-right: 7.5px;
+                width: 45px;
+                height: 30px;
+            }
             .controlDiv {
                 height: 120px;
             }
@@ -144,7 +161,7 @@
                 width: 50%;
             }
             .contentDiv {
-                height: calc(100% - 160px);
+                height: calc(100% - 150px);
             }
         }
     </style>
@@ -155,6 +172,7 @@
         <p id="title">Loading</p>
         <a href="/live.html">Live</a>
         <a class="selectedMenu" href="/history.html">History</a>
+        <a href="/timeline.html">Timeline</a>
         <svg id="download" viewBox="0 0 24 24">
             <path d="M0 0h24v24H0z" fill="none" />
             <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
@@ -162,10 +180,10 @@
     </div>
     <div class="controlDiv">
         <select id="folderList" disabled>
-            <option value="" disabled selected>Select the day</option>
+            <option value="1" disabled selected>Select the day</option>
         </select>
         <select id="fileList" disabled>
-            <option value="" disabled selected>Select the file</option>
+            <option value="1" disabled selected>Select the file</option>
         </select>
         <div class="controls">
             <button type="button" id="prevButton" disabled>&lt; Prev</button>
@@ -191,30 +209,35 @@
 
         function loadFolders() {
             folderRequest.abort();
+
+            var video = document.getElementById("video");
+            video.pause();
+            video.removeAttribute("src");
+            video.removeAttribute("type");
+            video.load();
+            video.style.visibility = "hidden";
+
+            var selectList = document.getElementById("fileList");
+            while (selectList.length > 1) {
+                selectList.removeChild(selectList.lastChild);
+            }
+            selectList.selectedIndex = 0;
+            selectList.disabled = true;
+
+            document.getElementById("prevButton").disabled = true;
+            document.getElementById("nextButton").disabled = true;
+
+            selectList = document.getElementById("folderList");
+            while (selectList.length > 1) {
+                selectList.removeChild(selectList.lastChild);
+            }
+            selectList.selectedIndex = 0;
+            selectList.disabled = true;
+
             folderRequest = new XMLHttpRequest();
             folderRequest.onload = function() {
                 if (folderRequest.status == 200) {
-                    var selectList = document.getElementById("fileList");
-                    while (selectList.length > 1) {
-                        selectList.removeChild(selectList.lastChild);
-                    }
-                    selectList.selectedIndex = 0;
-                    selectList.disabled = true;
-
-                    document.getElementById("prevButton").disabled = true;
-                    document.getElementById("nextButton").disabled = true;
-
-                    var video = document.getElementById("video");
-                    video.pause();
-                    video.removeAttribute("src");
-                    video.removeAttribute("type");
-                    video.load();
-                    video.style.visibility = "hidden";
-
-                    selectList = document.getElementById("folderList");
-                    while (selectList.length > 1) {
-                        selectList.removeChild(selectList.lastChild);
-                    }
+                    var selectList = document.getElementById("folderList");
                     var json = JSON.parse(folderRequest.responseText);
                     var folders = json.folders || [];
                     for (var i = 0; i < folders.length && folders[i]; i++) {
@@ -233,22 +256,30 @@
 
         function loadFiles() {
             fileRequest.abort();
+
+            var video = document.getElementById("video");
+            video.pause();
+            video.removeAttribute("src");
+            video.removeAttribute("type");
+            video.load();
+            video.style.visibility = "hidden";
+
+            var selectList = document.getElementById("fileList");
+            while (selectList.length > 1) {
+                selectList.removeChild(selectList.lastChild);
+            }
+            selectList.selectedIndex = 0;
+            selectList.disabled = true;
+
+            document.getElementById("prevButton").disabled = true;
+            document.getElementById("nextButton").disabled = true;
+
             if (document.getElementById("folderList").selectedIndex > 0) {
                 var folder = document.getElementById("folderList").value;
                 fileRequest = new XMLHttpRequest();
                 fileRequest.onload = function() {
                     if (fileRequest.status == 200) {
-                        var video = document.getElementById("video");
-                        video.pause();
-                        video.removeAttribute("src");
-                        video.removeAttribute("type");
-                        video.load();
-                        video.style.visibility = "hidden";
-
                         var selectList = document.getElementById("fileList");
-                        while (selectList.length > 1) {
-                            selectList.removeChild(selectList.lastChild);
-                        }
                         var json = JSON.parse(fileRequest.responseText);
                         var files = json.files || [];
                         for (var i = 0; i < files.length && files[i]; i++) {

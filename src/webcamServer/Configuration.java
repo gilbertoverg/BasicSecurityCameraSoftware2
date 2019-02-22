@@ -8,7 +8,7 @@ public class Configuration {
 	private final String name;
 	private final File ffmpeg, fileFolder;
 	private final WebcamServer.Encoder fileEncoder;
-	private final Integer fileQuality, fileWidth, fileHeight, fileFrameRate, fileSegmentDuration, maxFolders, jpegQuality, jpegWidth, jpegHeight, jpegFrameRate, httpPort;
+	private final Integer fileQuality, fileWidth, fileHeight, fileFrameRate, fileSegmentDuration, maxFolders, timelineQuality, jpegQuality, jpegWidth, jpegHeight, jpegFrameRate, httpPort;
 	private final Boolean debug, streamEnable, logConnections;
 	private final List<String> inputArguments;
 
@@ -28,6 +28,7 @@ public class Configuration {
 		fileFrameRate = stringToInt(getValue("Storage video frame rate", config));
 		fileSegmentDuration = stringToInt(getValue("Storage video segment duration", config));
 		maxFolders = stringToInt(getValue("Storage video max folders", config));
+		timelineQuality = stringToInt(getValue("Storage video timeline quality", config));
 		streamEnable = stringToBool(getValue("Stream enable", config));
 		jpegQuality = stringToInt(getValue("Stream frame quality", config));
 		jpegWidth = stringToInt(getValue("Stream frame width", config));
@@ -48,6 +49,7 @@ public class Configuration {
 			if(fileFrameRate == null) throw new IllegalArgumentException("Storage video frame rate is missing from " + configFile.getName());
 			if(fileSegmentDuration == null) throw new IllegalArgumentException("Storage video segment duration is missing from " + configFile.getName());
 			if(maxFolders == null) throw new IllegalArgumentException("Storage video max folders is missing from " + configFile.getName());
+			if(timelineQuality == null) throw new IllegalArgumentException("Storage video timeline quality is missing from " + configFile.getName());
 		}
 		if(streamEnable != null && streamEnable.booleanValue()) {
 			if(jpegQuality == null) throw new IllegalArgumentException("Stream frame quality is missing from " + configFile.getName());
@@ -73,6 +75,7 @@ public class Configuration {
 			conf += "Storage video frame rate: " + fileFrameRate.intValue() + "\r\n";
 			conf += "Storage video segment duration: " + fileSegmentDuration.intValue() + "\r\n";
 			conf += "Storage video max folders: " + maxFolders.intValue() + "\r\n";
+			conf += "Storage video timeline quality: " + timelineQuality.intValue() + "\r\n";
 		}
 		conf += "Stream enable: " + (streamEnable != null && streamEnable.booleanValue()) + "\r\n";
 		if(streamEnable != null && streamEnable.booleanValue()) {
@@ -130,6 +133,10 @@ public class Configuration {
 
 	public int getMaxFolders() {
 		return maxFolders == null ? 0 : maxFolders.intValue();
+	}
+
+	public int getTimelineQuality() {
+		return timelineQuality == null ? 0 : timelineQuality.intValue();
 	}
 
 	public int getJpegQuality() {

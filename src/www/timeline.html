@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="theme-color" content="#ffffff">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+        }
+
+        .menuDiv {
+            background-color: #505050;
+            font-size: 20px;
+            height: 40px;
+        }
+
+        .menuDiv a,
+        .menuDiv p {
+            float: left;
+            display: block;
+            text-decoration: none;
+            color: #FFFFFF;
+            text-align: center;
+            vertical-align: middle;
+            height: 100%;
+            line-height: 40px;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        .menuDiv svg {
+            float: right;
+            display: block;
+            fill: #FFFFFF;
+            padding-left: 10px;
+            padding-right: 10px;
+            width: 60px;
+            height: 40px;
+        }
+
+        .menuDiv a,
+        .menuDiv svg {
+            background-color: #505050;
+        }
+
+        .menuDiv p {
+            background-color: #037700;
+        }
+
+        .menuDiv .selectedMenu,
+        .menuDiv a:hover,
+        .menuDiv svg:hover {
+            background-color: #101010;
+        }
+
+        .controlDiv {
+            background-color: #707070;
+            height: 40px;
+        }
+
+        .controlDiv select,
+        .controlDiv button {
+            float: left;
+            display: block;
+            font-size: 15px;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #101010;
+            border-radius: 5px;
+            height: 40px;
+        }
+
+        .controlDiv select {
+            width: 150px;
+        }
+
+        .controlDiv button {
+            color: #000000;
+            background-color: #D0D0D0;
+            width: 75px;
+        }
+
+        .controlDiv button:disabled {
+            color: #A0A0A0;
+        }
+
+        .controlDiv button:enabled:active {
+            background-color: #A0A0A0;
+        }
+
+        .controlDiv .controls {
+            float: left;
+            display: inline;
+        }
+
+        .rangeDiv {
+            position: relative;
+            display: block;
+            width: 100%;
+            height: 40px;
+        }
+
+        .rangeDiv .slider {
+            visibility: hidden;
+            -webkit-appearance: none;
+            background: #909090;
+            outline: none;
+            cursor: pointer;
+            width: 100%;
+            height: 40px;
+        }
+
+        .rangeDiv .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            border: none;
+            background: #037700;
+            width: 40px;
+            height: 40px;
+        }
+
+        .rangeDiv .slider::-moz-range-thumb {
+            border: none;
+            background: #037700;
+            width: 40px;
+            height: 40px;
+        }
+
+        .rangeDiv .cover {
+            background-color: #909090;
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .rangeDiv .tooltipText {
+            visibility: hidden;
+            background-color: #000000;
+            color: #FFFFFF;
+            opacity: 0.5;
+            text-align: center;
+            padding: 5px 0;
+            border-radius: 6px;
+            position: absolute;
+            z-index: 1;
+            top: 100%;
+            left: 50%;
+            width: 320px;
+            margin-left: -160px;
+        }
+
+        .rangeDiv:active .tooltipText {
+            visibility: visible;
+        }
+
+        .contentDiv {
+            height: calc(100% - 120px);
+        }
+
+        .contentDiv canvas {
+            visibility: hidden;
+            display: block;
+            margin: auto;
+            border-style: solid;
+            border-width: 2px;
+            border-color: #000000;
+            width: 100%;
+            height: 100%;
+        }
+
+        @media (hover: hover) {
+            .rangeDiv:hover .tooltipText {
+                visibility: visible;
+            }
+        }
+
+        @media screen and (max-width: 600px) {
+            .menuDiv {
+                font-size: 15px;
+                height: 30px;
+            }
+            .menuDiv a,
+            .menuDiv p {
+                line-height: 30px;
+                padding-left: 7.5px;
+                padding-right: 7.5px;
+            }
+            .menuDiv svg {
+                padding-left: 7.5px;
+                padding-right: 7.5px;
+                width: 45px;
+                height: 30px;
+            }
+            .controlDiv {
+                height: 80px;
+            }
+            #folderList,
+            .controlDiv .controls {
+                float: none;
+                width: 100%;
+            }
+            .controlDiv button {
+                width: 16.666%;
+            }
+            .contentDiv {
+                height: calc(100% - 150px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="menuDiv">
+        <p id="title">Loading</p>
+        <a href="/live.html">Live</a>
+        <a href="/history.html">History</a>
+        <a class="selectedMenu" href="/timeline.html">Timeline</a>
+        <svg id="download" viewBox="0 0 24 24">
+            <path d="M0 0h24v24H0z" fill="none" />
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
+        </svg>
+    </div>
+    <div class="controlDiv">
+        <select id="folderList" disabled>
+            <option value="1" disabled selected>Select the day</option>
+        </select>
+        <div class="controls">
+            <button type="button" id="prevOneMinute" disabled>&lt; 1m</button>
+            <button type="button" id="prevTenSeconds" disabled>&lt; 10s</button>
+            <button type="button" id="prevOneSecond" disabled>&lt; 1s</button>
+            <button type="button" id="nextOneSecond" disabled>1s &gt;</button>
+            <button type="button" id="nextTenSeconds" disabled>10s &gt;</button>
+            <button type="button" id="nextOneMinute" disabled>1m &gt;</button>
+        </div>
+    </div>
+    <div class="rangeDiv">
+        <input type="range" class="slider" id="range" min="0" max="0" value="0" disabled>
+        <div class="cover" id="cover"></div>
+        <span class="tooltipText" id="tooltip">No day chosen</span>
+    </div>
+    <div id="contentDiv" class="contentDiv">
+        <canvas id="canvas">Your browser does not support the canvas tag</canvas>
+    </div>
+
+    <script>
+        var width = 320;
+        var height = 240;
+        var img = new Image();
+        var imgEnable = false;
+        var imgWaiting = false;
+        var prevFileLoaded = null;
+        var prevTimeLoaded = null;
+        var files = [];
+        var folderRequest = new XMLHttpRequest();
+        var fileRequest = new XMLHttpRequest();
+
+        function updateLayout() {
+            var elem = document.getElementById("contentDiv");
+            var ratio = Math.min(elem.getBoundingClientRect().width / width, elem.getBoundingClientRect().height / height);
+            document.getElementById("canvas").style.width = Math.floor(ratio * width) + "px";
+            document.getElementById("canvas").style.height = Math.floor(ratio * height) + "px";
+        };
+
+        function drawTextCanvas(text, color) {
+            var ctx = document.getElementById("canvas").getContext("2d");
+            ctx.fillStyle = "#808080";
+            ctx.fillRect(0, 0, width, height);
+            if (text && text.length > 0) {
+                ctx.font = "100px Arial";
+                ctx.font = Math.min(Math.floor(width / ctx.measureText(text).width * 90), 35) + "px Arial";
+                ctx.fillStyle = color;
+                ctx.textAlign = "center";
+                ctx.fillText(text, width / 2, height / 2);
+            }
+        };
+
+        img.onload = function() {
+            imgWaiting = false;
+            if (imgEnable) {
+                var ctx = document.getElementById("canvas").getContext("2d");
+                ctx.drawImage(img, 0, 0);
+                document.getElementById("tooltip").innerHTML = prevFileLoaded + " @ " + prevTimeLoaded.toFixed(3) + "s";
+            }
+            loadFrame();
+        };
+
+        img.onerror = function() {
+            imgWaiting = false;
+            if (imgEnable) {
+                drawTextCanvas("OFFLINE", "#FF0000");
+                document.getElementById("tooltip").innerHTML = prevFileLoaded + " @ " + prevTimeLoaded.toFixed(3) + "s";
+            }
+            loadFrame();
+        };
+
+        function loadFolders() {
+            folderRequest.abort();
+
+            document.getElementById("canvas").style.visibility = "hidden";
+            imgEnable = false;
+            prevFileLoaded = null;
+            prevTimeLoaded = null;
+            drawTextCanvas("Loading", "#000000");
+
+            document.getElementById("range").style.visibility = "hidden";
+            document.getElementById("range").disabled = true;
+            document.getElementById("range").min = "0";
+            document.getElementById("range").value = "0";
+            document.getElementById("range").max = "0";
+            document.getElementById("tooltip").innerHTML = "No day chosen";
+            document.getElementById("cover").style.visibility = "visible";
+
+            document.getElementById("prevOneMinute").disabled = true;
+            document.getElementById("prevTenSeconds").disabled = true;
+            document.getElementById("prevOneSecond").disabled = true;
+            document.getElementById("nextOneSecond").disabled = true;
+            document.getElementById("nextTenSeconds").disabled = true;
+            document.getElementById("nextOneMinute").disabled = true;
+
+            files = [];
+            var selectList = document.getElementById("folderList");
+            while (selectList.length > 1) {
+                selectList.removeChild(selectList.lastChild);
+            }
+            selectList.selectedIndex = 0;
+            selectList.disabled = true;
+
+            folderRequest = new XMLHttpRequest();
+            folderRequest.onload = function() {
+                if (folderRequest.status == 200) {
+                    var selectList = document.getElementById("folderList");
+                    var json = JSON.parse(folderRequest.responseText);
+                    var folders = json.folders || [];
+                    for (var i = 0; i < folders.length && folders[i]; i++) {
+                        var option = document.createElement("option");
+                        option.value = folders[i];
+                        option.text = folders[i];
+                        selectList.appendChild(option);
+                    }
+                    selectList.selectedIndex = 0;
+                    selectList.disabled = false;
+                }
+            };
+            folderRequest.open("GET", "/data/folderList", true);
+            folderRequest.send();
+        };
+
+        function loadFiles() {
+            fileRequest.abort();
+
+            document.getElementById("canvas").style.visibility = "hidden";
+            imgEnable = false;
+            prevFileLoaded = null;
+            prevTimeLoaded = null;
+            drawTextCanvas("Loading", "#000000");
+
+            document.getElementById("range").style.visibility = "hidden";
+            document.getElementById("range").disabled = true;
+            document.getElementById("range").min = "0";
+            document.getElementById("range").value = "0";
+            document.getElementById("range").max = "0";
+            document.getElementById("tooltip").innerHTML = "Folder is empty";
+            document.getElementById("cover").style.visibility = "visible";
+
+            document.getElementById("prevOneMinute").disabled = true;
+            document.getElementById("prevTenSeconds").disabled = true;
+            document.getElementById("prevOneSecond").disabled = true;
+            document.getElementById("nextOneSecond").disabled = true;
+            document.getElementById("nextTenSeconds").disabled = true;
+            document.getElementById("nextOneMinute").disabled = true;
+
+            files = [];
+
+            if (document.getElementById("folderList").selectedIndex > 0) {
+                var folder = document.getElementById("folderList").value;
+                fileRequest = new XMLHttpRequest();
+                fileRequest.onload = function() {
+                    if (fileRequest.status == 200) {
+                        var totalDuration = 0;
+                        var lastFps = 0;
+                        var json = JSON.parse(fileRequest.responseText);
+                        files = json.files || [];
+                        for (var i = 0; i < files.length && files[i]; i++) {
+                            if (files[i].duration && files[i].fps) {
+                                totalDuration += files[i].duration;
+                                lastFps = files[i].fps;
+                            }
+                        }
+                        if (lastFps > 0) {
+                            totalDuration -= 1 / lastFps;
+                        }
+                        if (totalDuration < 0) {
+                            totalDuration = 0;
+                        }
+
+                        document.getElementById("canvas").style.visibility = "visible";
+
+                        document.getElementById("range").max = Math.floor(totalDuration).toFixed(0);
+                        document.getElementById("range").style.visibility = "visible";
+                        document.getElementById("range").disabled = false;
+                        document.getElementById("cover").style.visibility = "hidden";
+
+                        document.getElementById("prevOneMinute").disabled = false;
+                        document.getElementById("prevTenSeconds").disabled = false;
+                        document.getElementById("prevOneSecond").disabled = false;
+                        document.getElementById("nextOneSecond").disabled = false;
+                        document.getElementById("nextTenSeconds").disabled = false;
+                        document.getElementById("nextOneMinute").disabled = false;
+
+                        imgEnable = true;
+                        loadFrame();
+                    }
+                };
+                fileRequest.open("GET", "/data/fileInfoList?folder=" + folder, true);
+                fileRequest.send();
+            }
+        };
+
+        function loadFrame() {
+            if (document.getElementById("folderList").selectedIndex > 0 && files && imgEnable && !imgWaiting) {
+                var folder = document.getElementById("folderList").value;
+                var file = null;
+
+                var sliderDuration = parseInt(document.getElementById("range").value);
+                var totalDuration = 0;
+                for (var i = 0; i < files.length && files[i]; i++) {
+                    if (files[i].duration && files[i].fps) {
+                        var realDuration = files[i].duration - (1 / files[i].fps);
+                        if (sliderDuration - totalDuration <= realDuration) {
+                            file = files[i].name;
+                            totalDuration = sliderDuration - totalDuration;
+                            break;
+                        }
+                        totalDuration += files[i].duration;
+                    }
+                }
+
+                if (file && (prevFileLoaded !== file || prevTimeLoaded !== totalDuration)) {
+                    imgWaiting = true;
+                    prevFileLoaded = file;
+                    prevTimeLoaded = totalDuration;
+                    img.src = "/data/fileFrame?folder=" + folder + "&file=" + file + "&time=" + totalDuration.toFixed(3);
+                }
+            }
+        };
+
+        function download() {
+            if (document.getElementById("folderList").selectedIndex > 0 && files && imgEnable) {
+                var folder = document.getElementById("folderList").value;
+                var file = null;
+
+                var sliderDuration = parseInt(document.getElementById("range").value);
+                var totalDuration = 0;
+                for (var i = 0; i < files.length && files[i]; i++) {
+                    if (files[i].duration && files[i].fps) {
+                        var realDuration = files[i].duration - (1 / files[i].fps);
+                        if (sliderDuration - totalDuration <= realDuration) {
+                            file = files[i].name;
+                            totalDuration = sliderDuration - totalDuration;
+                            break;
+                        }
+                        totalDuration += files[i].duration;
+                    }
+                }
+
+                if (file) {
+                    var a = document.createElement("a");
+                    a.setAttribute("download", file + "_frame_" + totalDuration.toFixed(3) + ".jpeg");
+                    a.setAttribute("href", "/data/fileFrame?folder=" + folder + "&file=" + file + "&time=" + totalDuration.toFixed(3));
+                    a.click();
+                }
+            }
+        };
+
+        function moveSeconds(seconds) {
+            var position = parseInt(document.getElementById("range").value) + seconds;
+            var min = parseInt(document.getElementById("range").min);
+            var max = parseInt(document.getElementById("range").max);
+            if (position < min) position = min;
+            if (position > max) position = max;
+            document.getElementById("range").value = position.toFixed(0);
+            loadFrame();
+        };
+
+        function initalize() {
+            var initRequest = new XMLHttpRequest();
+            initRequest.onload = function() {
+                if (initRequest.status == 200) {
+                    var json = JSON.parse(initRequest.responseText);
+
+                    var title = (json.title || "No name").trim();
+                    if (title.length < 1) title = "No name";
+                    document.title = title;
+                    document.getElementById("title").innerHTML = title;
+
+                    width = json.historyWidth || 64;
+                    if (isNaN(width)) width = 64;
+                    if (width < 64) width = 64;
+                    if (width > 10000) width = 10000;
+                    document.getElementById("canvas").width = width;
+
+                    height = json.historyHeight || 64;
+                    if (isNaN(height)) height = 64;
+                    if (height < 64) height = 64;
+                    if (height > 10000) height = 10000;
+                    document.getElementById("canvas").height = height;
+
+                    window.addEventListener("resize", updateLayout);
+                    updateLayout();
+                    loadFolders();
+                    document.getElementById("folderList").addEventListener("change", loadFiles);
+                    document.getElementById("range").addEventListener("input", loadFrame);
+                    document.getElementById("prevOneMinute").addEventListener("click", function() {
+                        moveSeconds(-60);
+                    });
+                    document.getElementById("prevTenSeconds").addEventListener("click", function() {
+                        moveSeconds(-10);
+                    });
+                    document.getElementById("prevOneSecond").addEventListener("click", function() {
+                        moveSeconds(-1);
+                    });
+                    document.getElementById("nextOneSecond").addEventListener("click", function() {
+                        moveSeconds(1);
+                    });
+                    document.getElementById("nextTenSeconds").addEventListener("click", function() {
+                        moveSeconds(10);
+                    });
+                    document.getElementById("nextOneMinute").addEventListener("click", function() {
+                        moveSeconds(60);
+                    });
+                    document.getElementById("download").addEventListener("click", download);
+                }
+            };
+            initRequest.open("GET", "/data/config", true);
+            initRequest.send();
+        };
+
+        initalize();
+    </script>
+</body>
+
+</html>

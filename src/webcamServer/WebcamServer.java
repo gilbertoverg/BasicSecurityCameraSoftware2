@@ -5,7 +5,7 @@ import java.util.*;
 
 public class WebcamServer {
 	public static enum Encoder { MPEG4, H264, H265 };
-	public static String VERSION = "2.0.0";
+	public static String VERSION = "2.1.0";
 	public static Logger logger = new Logger();
 	
 	private static Configuration configuration = null;
@@ -21,6 +21,8 @@ public class WebcamServer {
 				logger.printLogThrowable(e);
 			}
 		});
+		
+		Locale.setDefault(Locale.US);
 		
 		try {
 			File config = new File("Config.txt");
@@ -38,7 +40,7 @@ public class WebcamServer {
 				logger.setDebug(configuration.getDebug());
 				
 				logger.printLogLn(false, "Initializing file manager");
-				fileManager = new FileManager(configuration.getFileFolder(), configuration.getMaxFolders(), configuration.getStreamEnable());
+				fileManager = new FileManager(configuration.getFFmpeg(), configuration.getFileFolder(), configuration.getMaxFolders(), configuration.getTimelineQuality(), configuration.getStreamEnable());
 				
 				logger.printLogLn(false, "Initializing webcam");
 				ffmpegWebcamReader = new FFmpegWebcamReader(configuration.getFFmpeg(), configuration.getInputArguments(),
@@ -99,20 +101,30 @@ public class WebcamServer {
 	
 	private static void handleConsole() {
 		Scanner console = new Scanner(System.in);
-		while(console.hasNextLine()) {
-			String line = console.nextLine();
-			StringTokenizer tokenizer = new StringTokenizer(line);
-			
-			if(tokenizer.hasMoreTokens()) {
-				String token = tokenizer.nextToken();
-				
-				if(token.equalsIgnoreCase("quit")) {
-					logger.printLogLn(false, "Quitting");
-					break;
+
+		try {
+			while(console.hasNextLine()) {
+				String line = console.nextLine();
+				StringTokenizer tokenizer = new StringTokenizer(line);
+
+				if(tokenizer.hasMoreTokens()) {
+					String token = tokenizer.nextToken();
+
+					if(token.equalsIgnoreCase("quit")) {
+						logger.printLogLn(false, "Quitting");
+						break;
+					}
+					else if(token.equalsIgnoreCase("reindex")) {
+						logger.printLogLn(false, "Reindex activated");
+						fileManager.activateReIndex();
+					}
+					else logger.printLogLn(false, "Command not valid");
 				}
-				else logger.printLogLn(false, "Command not valid");
 			}
+		} catch (Exception e) {
+			logger.printLogException(e);
 		}
+
 		console.close();
 	}
 	

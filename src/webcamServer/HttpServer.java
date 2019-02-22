@@ -75,11 +75,7 @@ public class HttpServer extends NanoHTTPD {
 				byte[] jpeg = fileManager.getLastJpeg();
 				if(jpeg == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");
 				ByteArrayInputStream bais = new ByteArrayInputStream(jpeg);
-				Response response = Response.newFixedLengthResponse(Status.OK, "image/jpeg", bais, bais.available());
-				response.addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-				response.addHeader("Pragma", "no-cache");
-				response.addHeader("Expires", "0");
-				return response;
+				return disableCache(Response.newFixedLengthResponse(Status.OK, "image/jpeg", bais, bais.available()));
 			}
 			if(session.getUri().equals("/data/folderList")) {
 				String[] folders = fileManager.getFolders();
@@ -90,7 +86,7 @@ public class HttpServer extends NanoHTTPD {
 					if(i < folders.length - 1) json += ",";
 				}
 				json += "]}";
-				return Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, json);
+				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, json));
 			}
 			if(session.getUri().equals("/data/fileList")) {
 				List<String> folders = session.getParameters().get("folder");
@@ -104,7 +100,35 @@ public class HttpServer extends NanoHTTPD {
 					if(i < files.length - 1) json += ",";
 				}
 				json += "]}";
-				return Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, json);
+				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, json));
+			}
+			if(session.getUri().equals("/data/fileInfoList")) {
+				List<String> folders = session.getParameters().get("folder");
+				if(folders == null || folders.size() != 1) return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
+				String folder = folders.get(0);
+				String fileInfoList = fileManager.getFileInfoList(folder);
+				if(fileInfoList == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");
+				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, fileInfoList));
+			}
+			if(session.getUri().equals("/data/fileFrame")) {
+				List<String> folders = session.getParameters().get("folder");
+				if(folders == null || folders.size() != 1) return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
+				List<String> files = session.getParameters().get("file");
+				if(files == null || files.size() != 1) return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
+				List<String> times = session.getParameters().get("time");
+				if(times == null || times.size() != 1) return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
+				String folder = folders.get(0);
+				String file = files.get(0);
+				double time = 0;
+				try {
+					time = Double.parseDouble(times.get(0));
+				} catch (NumberFormatException e) {
+					return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
+				}
+				byte[] frame = fileManager.getFrameFromFile(file, folder, time);
+				if(frame == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");
+				ByteArrayInputStream bais = new ByteArrayInputStream(frame);
+				return Response.newFixedLengthResponse(Status.OK, "image/jpeg", bais, bais.available());
 			}
 			if(session.getUri().equals("/data/file")) {
 				List<String> folders = session.getParameters().get("folder");
@@ -124,7 +148,7 @@ public class HttpServer extends NanoHTTPD {
 						",\"liveFrameRate\":" + Integer.toString(jpegFrameRate) + 
 						",\"historyWidth\":" + Integer.toString(fileWidth) +
 						",\"historyHeight\":" + Integer.toString(fileHeight) + "}";
-				return Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, json);
+				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, json));
 			}
 			if(session.getUri().equals("/")) {
 				if(jpegStream) {
@@ -229,5 +253,12 @@ public class HttpServer extends NanoHTTPD {
 		}
 		
 		return Response.newFixedLengthResponse(Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "Internal error");
+	}
+	
+	private Response disableCache(Response r) {
+		r.addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+		r.addHeader("Pragma", "no-cache");
+		r.addHeader("Expires", "0");
+		return r;
 	}
 }

@@ -9,17 +9,23 @@ public class FileManager implements JpegListener {
 	private final String TMP_FILE_PATTERN = "TMP_????-??-??_??-??-??.mp4";
 	private final String FILE_PATTERN = "????-??-??_??-??-??.mp4";
 	private final String FOLDER_PATTERN = "????-??-??";
+	private final String FILE_LIST_NAME = "FileList.txt";
+	
+	private final FFmpegFileInfo ffmpegFileInfo;
+	private final FFmpegFrameGrabber ffmpegFrameGrabber;
 	
 	private final File storageFolder;
 	private final int maxFolders;
 	private final boolean enableJpeg;
 	
 	private volatile Thread thread = null;
-	private volatile boolean killThread = false;
+	private volatile boolean killThread = false, reIndex = false;
 	
 	private volatile byte[] lastJpeg = null;
 
-	public FileManager(File storageFolder, int maxFolders, boolean enableJpeg) {
+	public FileManager(File ffmpeg, File storageFolder, int maxFolders, int timelineQuality, boolean enableJpeg) {
+		this.ffmpegFileInfo = new FFmpegFileInfo(ffmpeg);
+		this.ffmpegFrameGrabber = new FFmpegFrameGrabber(ffmpeg, timelineQuality);
 		this.storageFolder = storageFolder;
 		this.maxFolders = maxFolders;
 		this.enableJpeg = enableJpeg;
@@ -142,6 +148,38 @@ public class FileManager implements JpegListener {
 		return null;
 	}
 	
+	public String getFileInfoList(String folderName) {
+		try {
+			if(storageFolder == null) return null;
+			if(!matchString(folderName, FOLDER_PATTERN)) return null;
+			File folder = new File(storageFolder, folderName);
+			File file = new File(folder, FILE_LIST_NAME);
+			if(!file.exists()) return null;
+			return new String(Files.readAllBytes(file.toPath()));
+		} catch (Exception e) {
+			WebcamServer.logger.printLogException(e);
+		}
+		
+		return null;
+	}
+	
+	public byte[] getFrameFromFile(String fileName, String folderName, double time) {
+		try {
+			if(storageFolder == null) return null;
+			if(!matchString(fileName, FILE_PATTERN)) return null;
+			if(!matchString(folderName, FOLDER_PATTERN)) return null;
+			if(time < 0.0) return null;
+			File folder = new File(storageFolder, folderName);
+			File file = new File(folder, fileName);
+			if(!file.exists()) return null;
+			return ffmpegFrameGrabber.getFrameFromFile(file, time);
+		} catch (Exception e) {
+			WebcamServer.logger.printLogException(e);
+		}
+
+		return null;
+	}
+	
 	public byte[] getLastJpeg() {
 		if(!enableJpeg) return null;
 		return lastJpeg;
@@ -150,6 +188,10 @@ public class FileManager implements JpegListener {
 	@Override
 	public void newJpeg(byte[] jpeg) {
 		lastJpeg = jpeg;
+	}
+	
+	public void activateReIndex() {
+		reIndex = true;
 	}
 	
 	private void manageTask(boolean finalize) {
@@ -172,6 +214,8 @@ public class FileManager implements JpegListener {
 					File newFile = new File(newFolder, tmpFile.getName().substring(4));
 					WebcamServer.logger.printLogLn(true, "Moving file: " + newFile.getName());
 					Files.move(tmpFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+					
+					updateFileList(newFile, newFolder);
 				}
 			}
 			
@@ -184,6 +228,92 @@ public class FileManager implements JpegListener {
 						deleteFolderAndContent(folder);
 					}
 				}
+			}
+			
+			if(reIndex) {
+				reIndex = false;
+				reindex();
+			}
+		} catch (Exception e) {
+			WebcamServer.logger.printLogException(e);
+		}
+	}
+	
+	private void reindex() {
+		try {
+			List<File> folders = listFiles(storageFolder, FOLDER_PATTERN);
+			if(folders != null) {
+				for(File folder : folders) {
+					WebcamServer.logger.printLogLn(false, "Updating index for folder: " + folder.getName());
+					
+					File fileList = new File(folder, FILE_LIST_NAME);
+					if(fileList.exists()) fileList.delete();
+					
+					List<File> files = listFiles(folder, FILE_PATTERN);
+					if(files != null) {
+						for(File file : files) updateFileList(file, folder);
+					}
+				}
+			}
+			
+			WebcamServer.logger.printLogLn(false, "Index update completed");
+		} catch (Exception e) {
+			WebcamServer.logger.printLogException(e);
+		}
+	}
+	
+	private void updateFileList(File file, File folder) {
+		try {
+			FileInfo fileInfo = ffmpegFileInfo.getFileInfo(file);
+			if(fileInfo == null) WebcamServer.logger.printLogLn(false, "Unable to get video info for " + file.getName());
+			else {
+				WebcamServer.logger.printLogLn(true, "Video info for " + file.getName() + ": " + fileInfo.toString());
+				
+				File fileList = new File(folder, FILE_LIST_NAME);
+				
+				RandomAccessFile raf = new RandomAccessFile(fileList, "rw");
+				try {
+					if(raf.length() < 4) raf.writeBytes("{\"files\":[\r\n");
+					else {
+						raf.seek(raf.length() - 4);
+						if(raf.readByte() == '\r' && raf.readByte() == '\n' && raf.readByte() == ']' && raf.readByte() == '}') {
+							raf.seek(raf.length() - 4);
+							raf.writeBytes(",\r\n");
+						}
+						else {
+							WebcamServer.logger.printLogLn(false, "Video list for directory " + folder.getName() + " is corrupted");
+							long i = raf.length() - 3;
+							while(i >= 0) {
+								raf.seek(i);
+								byte b1 = raf.readByte();
+								byte b2 = raf.readByte();
+								byte b3 = raf.readByte();
+								if(b1 == ',' && b2 == '\r' && b3 == '\n') break;
+								if(b1 == '}' && b2 == '\r' && b3 == '\n') {
+									i++;
+									break;
+								}
+								i--;
+							}
+							if(i <= 12) {
+								raf.seek(0);
+								raf.writeBytes("{\"files\":[\r\n");
+							}
+							else {
+								raf.setLength(i);
+								raf.writeBytes(",\r\n");
+							}
+						}
+					}
+					raf.writeBytes("\t{\"name\":\"" + file.getName() +
+							"\",\"duration\":" + String.format("%.5f", fileInfo.getDurationSeconds()) +
+							",\"fps\":" + String.format("%.5f", fileInfo.getFps()) + 
+							"}\r\n]}");
+				} catch (Exception e) {
+					WebcamServer.logger.printLogException(e);
+				}
+				
+				if(raf != null) raf.close();
 			}
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
