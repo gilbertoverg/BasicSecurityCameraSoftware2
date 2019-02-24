@@ -163,7 +163,14 @@ public class HttpServer extends NanoHTTPD {
 			if(session.getUri().indexOf('/', 1) < 0 && session.getUri().indexOf('\\') < 0 && session.getUri().indexOf("..") < 0) {
 				InputStream in = WebcamServer.class.getResourceAsStream("/www" + session.getUri());
 				if(in == null) return Response.newFixedLengthResponse(Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "NOT FOUND");
-				else return Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_HTML, in, in.available());
+				else {
+					String mime = NanoHTTPD.MIME_HTML;
+					if(session.getUri().endsWith(".png")) mime = "image/png";
+					else if(session.getUri().endsWith(".xml")) mime = "application/xml";
+					else if(session.getUri().endsWith(".ico")) mime = "image/x-icon";
+					else if(session.getUri().endsWith(".webmanifest")) mime = "text/plain";
+					return Response.newFixedLengthResponse(Status.OK, mime, in, in.available());
+				}
 			}
 			return Response.newFixedLengthResponse(Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "NOT FOUND");
 		} catch (Exception e) {
