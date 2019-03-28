@@ -8,10 +8,10 @@ import org.nanohttpd.protocols.http.response.*;
 public class HttpServer extends NanoHTTPD {
 	private final FileManager fileManager;
 	private final boolean logConnections, jpegStream;
-	private final String name;
+	private final String name, authorizationHeader;
 	private final int jpegWidth, jpegHeight, jpegFrameRate, fileWidth, fileHeight;
 	
-	public HttpServer(FileManager fileManager, int httpPort, boolean logConnections, String name,
+	public HttpServer(FileManager fileManager, int httpPort, boolean logConnections, String name, String authorizationHeader,
 			boolean jpegStream, int jpegWidth, int jpegHeight, int jpegFrameRate,
 			int fileWidth, int fileHeight) {
 		super(httpPort);
@@ -21,6 +21,7 @@ public class HttpServer extends NanoHTTPD {
 		this.fileManager = fileManager;
 		this.logConnections = logConnections;
 		this.name = name;
+		this.authorizationHeader = authorizationHeader;
 		this.jpegStream = jpegStream;
 		this.jpegWidth = jpegWidth;
 		this.jpegHeight = jpegHeight;
@@ -67,17 +68,32 @@ public class HttpServer extends NanoHTTPD {
 	
 	@Override
     public Response serve(IHTTPSession session) {
-		if(logConnections) WebcamServer.logger.printLogLn(false, "HTTP request from: " + session.getRemoteIpAddress() + ", uri: " + session.getUri());
-		else WebcamServer.logger.printLogLn(true, "HTTP request from: " + session.getRemoteIpAddress() + ", uri: " + session.getUri());
+		boolean auth = false;
+		try {
+			if(authorizationHeader == null) auth = true;
+			else {
+				String rxAuth = session.getHeaders().get("authorization");
+				if(rxAuth != null && authorizationHeader.equals(rxAuth)) auth = true;
+			}
+		} catch (Exception e) {
+			WebcamServer.logger.printLogException(e);
+		}
+		
+		WebcamServer.logger.printLogLn(!logConnections, "HTTP " + (auth ? "" : "UNAUTHORIZED ") + "request from: " + session.getRemoteIpAddress() + ", uri: " + session.getUri());
 		
 		try {
-			if(session.getUri().equals("/data/frame")) {
+			if(!auth) {
+				Response r = Response.newFixedLengthResponse(Status.UNAUTHORIZED, NanoHTTPD.MIME_PLAINTEXT, "UNAUTHORIZED");
+				r.addHeader("WWW-Authenticate", "Basic realm=\"Authorization required\"");
+				return r;
+			}
+			else if(session.getUri().equals("/data/frame")) {
 				byte[] jpeg = fileManager.getLastJpeg();
 				if(jpeg == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");
 				ByteArrayInputStream bais = new ByteArrayInputStream(jpeg);
 				return disableCache(Response.newFixedLengthResponse(Status.OK, "image/jpeg", bais, bais.available()));
 			}
-			if(session.getUri().equals("/data/folderList")) {
+			else if(session.getUri().equals("/data/folderList")) {
 				String[] folders = fileManager.getFolders();
 				if(folders == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");
 				String json = "{\"folders\":[";
@@ -88,7 +104,7 @@ public class HttpServer extends NanoHTTPD {
 				json += "]}";
 				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, json));
 			}
-			if(session.getUri().equals("/data/fileList")) {
+			else if(session.getUri().equals("/data/fileList")) {
 				List<String> folders = session.getParameters().get("folder");
 				if(folders == null || folders.size() != 1) return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
 				String folder = folders.get(0);
@@ -102,7 +118,7 @@ public class HttpServer extends NanoHTTPD {
 				json += "]}";
 				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, json));
 			}
-			if(session.getUri().equals("/data/fileInfoList")) {
+			else if(session.getUri().equals("/data/fileInfoList")) {
 				List<String> folders = session.getParameters().get("folder");
 				if(folders == null || folders.size() != 1) return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
 				String folder = folders.get(0);
@@ -110,7 +126,7 @@ public class HttpServer extends NanoHTTPD {
 				if(fileInfoList == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");
 				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, fileInfoList));
 			}
-			if(session.getUri().equals("/data/fileFrame")) {
+			else if(session.getUri().equals("/data/fileFrame")) {
 				List<String> folders = session.getParameters().get("folder");
 				if(folders == null || folders.size() != 1) return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
 				List<String> files = session.getParameters().get("file");
@@ -130,7 +146,7 @@ public class HttpServer extends NanoHTTPD {
 				ByteArrayInputStream bais = new ByteArrayInputStream(frame);
 				return Response.newFixedLengthResponse(Status.OK, "image/jpeg", bais, bais.available());
 			}
-			if(session.getUri().equals("/data/file")) {
+			else if(session.getUri().equals("/data/file")) {
 				List<String> folders = session.getParameters().get("folder");
 				if(folders == null || folders.size() != 1) return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
 				List<String> files = session.getParameters().get("file");
@@ -141,7 +157,7 @@ public class HttpServer extends NanoHTTPD {
 				if(f == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");
 				return serveFile(session, f, "video/mp4");
 			}
-			if(session.getUri().equals("/data/config")) {
+			else if(session.getUri().equals("/data/config")) {
 				String json = "{\"title\":\"" + name +
 						"\",\"liveWidth\":" + Integer.toString(jpegWidth) +
 						",\"liveHeight\":" + Integer.toString(jpegHeight) +
@@ -150,7 +166,7 @@ public class HttpServer extends NanoHTTPD {
 						",\"historyHeight\":" + Integer.toString(fileHeight) + "}";
 				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, json));
 			}
-			if(session.getUri().equals("/")) {
+			else if(session.getUri().equals("/")) {
 				if(jpegStream) {
 					InputStream in = WebcamServer.class.getResourceAsStream("/www/live.html");
 					return Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_HTML, in, in.available());
@@ -160,7 +176,7 @@ public class HttpServer extends NanoHTTPD {
 					return Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_HTML, in, in.available());
 				}
 			}
-			if(session.getUri().indexOf('/', 1) < 0 && session.getUri().indexOf('\\') < 0 && session.getUri().indexOf("..") < 0) {
+			else if(session.getUri().indexOf('/', 1) < 0 && session.getUri().indexOf('\\') < 0 && session.getUri().indexOf("..") < 0) {
 				InputStream in = WebcamServer.class.getResourceAsStream("/www" + session.getUri());
 				if(in == null) return Response.newFixedLengthResponse(Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "NOT FOUND");
 				else {
@@ -172,7 +188,7 @@ public class HttpServer extends NanoHTTPD {
 					return Response.newFixedLengthResponse(Status.OK, mime, in, in.available());
 				}
 			}
-			return Response.newFixedLengthResponse(Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "NOT FOUND");
+			else return Response.newFixedLengthResponse(Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "NOT FOUND");
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}

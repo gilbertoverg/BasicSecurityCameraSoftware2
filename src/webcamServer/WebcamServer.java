@@ -5,7 +5,7 @@ import java.util.*;
 
 public class WebcamServer {
 	public static enum Encoder { MPEG4, H264, H265 };
-	public static String VERSION = "2.1.0";
+	public static String VERSION = "2.2.0";
 	public static Logger logger = new Logger();
 	
 	private static Configuration configuration = null;
@@ -50,7 +50,7 @@ public class WebcamServer {
 				
 				if(configuration.getHttpPort() > 0) {
 					logger.printLogLn(false, "Initializing web server");
-					httpServer = new HttpServer(fileManager, configuration.getHttpPort(), configuration.getLogConnections(), configuration.getName(),
+					httpServer = new HttpServer(fileManager, configuration.getHttpPort(), configuration.getLogConnections(), configuration.getName(), configuration.getAuthorizationHeader(),
 							configuration.getStreamEnable(), configuration.getJpegWidth(), configuration.getJpegHeight(), configuration.getJpegFrameRate(),
 							configuration.getFileWidth(), configuration.getFileHeight());
 				}

@@ -5,7 +5,7 @@ import java.nio.file.*;
 import java.util.*;
 
 public class Configuration {
-	private final String name;
+	private final String name, username, password;
 	private final File ffmpeg, fileFolder;
 	private final WebcamServer.Encoder fileEncoder;
 	private final Integer fileQuality, fileWidth, fileHeight, fileFrameRate, fileSegmentDuration, maxFolders, timelineQuality, jpegQuality, jpegWidth, jpegHeight, jpegFrameRate, httpPort;
@@ -35,6 +35,8 @@ public class Configuration {
 		jpegHeight = stringToInt(getValue("Stream frame height", config));
 		jpegFrameRate = stringToInt(getValue("Stream frame rate", config));
 		httpPort = stringToInt(getValue("Web server port", config));
+		username = getValue("Web server username", config);
+		password = getValue("Web server password", config);
 		logConnections = stringToBool(getValue("Web server log connections", config));
 		
 		if(name == null || name.isEmpty()) throw new IllegalArgumentException("Name is missing from " + configFile.getName());
@@ -58,6 +60,8 @@ public class Configuration {
 			if(jpegFrameRate == null) throw new IllegalArgumentException("Stream frame rate is missing from " + configFile.getName());
 		}
 		if(httpPort != null) {
+			if(username == null && password != null) throw new IllegalArgumentException("Web server username is missing from " + configFile.getName());
+			if(username != null && password == null) throw new IllegalArgumentException("Web server password is missing from " + configFile.getName());
 			if(logConnections == null) throw new IllegalArgumentException("Web server log connections is missing from " + configFile.getName());
 		}
 		
@@ -86,6 +90,8 @@ public class Configuration {
 		}
 		conf += "Web server port: " + httpPort.intValue() + "\r\n";
 		if(httpPort != null) {
+			conf += "Web server username: " + (username == null ? "" : username) + "\r\n";
+			conf += "Web server password: " + (password == null ? "" : getPasswordMasked()) + "\r\n";
 			conf += "Web server log connections: " + logConnections.booleanValue() + "\r\n";
 		}
 		WebcamServer.logger.printLog(false, conf);
@@ -157,6 +163,18 @@ public class Configuration {
 
 	public int getHttpPort() {
 		return httpPort == null ? 0 : httpPort.intValue();
+	}
+
+	public String getAuthorizationHeader() {
+		if(username == null || password == null) return null;
+		return "Basic " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes());
+	}
+
+	public String getPasswordMasked() {
+		if(password == null) return null;
+		String out = "";
+		for(int i = 0; i < password.length(); i++) out += "*";
+		return out;
 	}
 
 	public boolean getDebug() {
