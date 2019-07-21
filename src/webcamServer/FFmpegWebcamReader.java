@@ -25,19 +25,21 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 		if(ind < 0 || ind == inputArguments.size() - 1 || inputArguments.get(ind + 1).startsWith("-")) throw new IllegalArgumentException("Input arguments are not valid");
 		if(fileFolder != null) {
 			if(encoder == null) throw new IllegalArgumentException("Unknown encoder");
-			if(encoder == WebcamServer.Encoder.MPEG4) {
-				if(fileQuality < 1 || fileQuality > 31) throw new IllegalArgumentException("File quality out of range");
+			if(encoder != WebcamServer. Encoder.COPY) {
+				if(encoder == WebcamServer.Encoder.MPEG4) {
+					if(fileQuality < 1 || fileQuality > 31) throw new IllegalArgumentException("File quality out of range");
+				}
+				else if(encoder == WebcamServer.Encoder.H264) {
+					if(fileQuality < 1 || fileQuality > 51) throw new IllegalArgumentException("File quality out of range");
+				}
+				else if(encoder == WebcamServer. Encoder.H265) {
+					if(fileQuality < 1 || fileQuality > 51) throw new IllegalArgumentException("File quality out of range");
+				}
+				else throw new IllegalArgumentException("Unknown encoder");
+				if(fileWidth < 64 || fileWidth > 10000) throw new IllegalArgumentException("File width out of range");
+				if(fileHeight < 64 || fileHeight > 10000) throw new IllegalArgumentException("File height out of range");
+				if(fileFrameRate < 1 || fileFrameRate > 60) throw new IllegalArgumentException("File frame rate out of range");
 			}
-			else if(encoder == WebcamServer.Encoder.H264) {
-				if(fileQuality < 1 || fileQuality > 51) throw new IllegalArgumentException("File quality out of range");
-			}
-			else if(encoder ==WebcamServer. Encoder.H265) {
-				if(fileQuality < 1 || fileQuality > 51) throw new IllegalArgumentException("File quality out of range");
-			}
-			else throw new IllegalArgumentException("Unknown encoder");
-			if(fileWidth < 64 || fileWidth > 10000) throw new IllegalArgumentException("File width out of range");
-			if(fileHeight < 64 || fileHeight > 10000) throw new IllegalArgumentException("File height out of range");
-			if(fileFrameRate < 1 || fileFrameRate > 60) throw new IllegalArgumentException("File frame rate out of range");
 			if(fileSegmentDuration < 5 || fileSegmentDuration > 3600) throw new IllegalArgumentException("File segment duration out of range");
 		}
 		if(jpegStream) {
@@ -100,12 +102,18 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 				cmdList.add("-pix_fmt");
 				cmdList.add("yuv420p");
 			}
+			else if(encoder == WebcamServer.Encoder.COPY) {
+				cmdList.add("-c:v");
+				cmdList.add("copy");
+			}
 			
-			cmdList.add("-s");
-			cmdList.add(fileWidth + "x" + fileHeight);
-			
-			cmdList.add("-r");
-			cmdList.add(Integer.toString(fileFrameRate));
+			if(encoder != WebcamServer.Encoder.COPY) {
+				cmdList.add("-s");
+				cmdList.add(fileWidth + "x" + fileHeight);
+
+				cmdList.add("-r");
+				cmdList.add(Integer.toString(fileFrameRate));
+			}
 			
 			cmdList.add("-movflags");
 			cmdList.add("+faststart");

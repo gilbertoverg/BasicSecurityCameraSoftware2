@@ -284,8 +284,8 @@
                         var files = json.files || [];
                         for (var i = 0; i < files.length && files[i]; i++) {
                             var option = document.createElement("option");
-                            option.value = files[i];
-                            option.text = files[i];
+                            option.value = files[i].name;
+                            option.text = files[i].name;
                             selectList.appendChild(option);
                         }
                         selectList.selectedIndex = 0;

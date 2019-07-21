@@ -45,10 +45,10 @@ public class Configuration {
 		if(debug == null) throw new IllegalArgumentException("Debug is missing from " + configFile.getName());
 		if(fileFolder != null) {
 			if(fileEncoder == null) throw new IllegalArgumentException("Storage video encoder is missing from " + configFile.getName());
-			if(fileQuality == null) throw new IllegalArgumentException("Storage video quality is missing from " + configFile.getName());
+			if(fileEncoder != WebcamServer.Encoder.COPY && fileQuality == null) throw new IllegalArgumentException("Storage video quality is missing from " + configFile.getName());
 			if(fileWidth == null) throw new IllegalArgumentException("Storage video width is missing from " + configFile.getName());
 			if(fileHeight == null) throw new IllegalArgumentException("Storage video height is missing from " + configFile.getName());
-			if(fileFrameRate == null) throw new IllegalArgumentException("Storage video frame rate is missing from " + configFile.getName());
+			if(fileEncoder != WebcamServer.Encoder.COPY && fileFrameRate == null) throw new IllegalArgumentException("Storage video frame rate is missing from " + configFile.getName());
 			if(fileSegmentDuration == null) throw new IllegalArgumentException("Storage video segment duration is missing from " + configFile.getName());
 			if(maxFolders == null) throw new IllegalArgumentException("Storage video max folders is missing from " + configFile.getName());
 			if(timelineQuality == null) throw new IllegalArgumentException("Storage video timeline quality is missing from " + configFile.getName());
@@ -73,10 +73,10 @@ public class Configuration {
 		conf += "Storage folder: " + (fileFolder == null ? "none" : fileFolder.getAbsolutePath()) + "\r\n";
 		if(fileFolder != null) {
 			conf += "Storage video encoder: " + fileEncoder.name() + "\r\n";
-			conf += "Storage video quality: " + fileQuality.intValue() + "\r\n";
+			if(fileEncoder != WebcamServer.Encoder.COPY) conf += "Storage video quality: " + fileQuality.intValue() + "\r\n";
 			conf += "Storage video width: " + fileWidth.intValue() + "\r\n";
 			conf += "Storage video height: " + fileHeight.intValue() + "\r\n";
-			conf += "Storage video frame rate: " + fileFrameRate.intValue() + "\r\n";
+			if(fileEncoder != WebcamServer.Encoder.COPY) conf += "Storage video frame rate: " + fileFrameRate.intValue() + "\r\n";
 			conf += "Storage video segment duration: " + fileSegmentDuration.intValue() + "\r\n";
 			conf += "Storage video max folders: " + maxFolders.intValue() + "\r\n";
 			conf += "Storage video timeline quality: " + timelineQuality.intValue() + "\r\n";
@@ -90,8 +90,10 @@ public class Configuration {
 		}
 		conf += "Web server port: " + httpPort.intValue() + "\r\n";
 		if(httpPort != null) {
-			conf += "Web server username: " + (username == null ? "" : username) + "\r\n";
-			conf += "Web server password: " + (password == null ? "" : getPasswordMasked()) + "\r\n";
+			if(username != null && password != null) {
+				conf += "Web server username: " + username + "\r\n";
+				conf += "Web server password: " + getPasswordMasked() + "\r\n";
+			}
 			conf += "Web server log connections: " + logConnections.booleanValue() + "\r\n";
 		}
 		WebcamServer.logger.printLog(false, conf);
@@ -197,7 +199,7 @@ public class Configuration {
 	private Integer stringToInt(String s) {
 		try {
 			int i = Integer.parseInt(s);
-			return new Integer(i);
+			return Integer.valueOf(i);
 		} catch (Exception e) {
 			
 		}
@@ -207,8 +209,8 @@ public class Configuration {
 	
 	private Boolean stringToBool(String s) {
 		if(s == null) return null;
-		if(s.equalsIgnoreCase("true")) return new Boolean(true);
-		if(s.equalsIgnoreCase("false")) return new Boolean(false);
+		if(s.equalsIgnoreCase("true")) return Boolean.TRUE;
+		if(s.equalsIgnoreCase("false")) return Boolean.FALSE;
 		return null;
 	}
 	
@@ -217,6 +219,7 @@ public class Configuration {
 		if(s.equalsIgnoreCase("mpeg4")) return WebcamServer.Encoder.MPEG4;
 		if(s.equalsIgnoreCase("h264")) return WebcamServer.Encoder.H264;
 		if(s.equalsIgnoreCase("h265")) return WebcamServer.Encoder.H265;
+		if(s.equalsIgnoreCase("copy")) return WebcamServer.Encoder.COPY;
 		return null;
 	}
 	

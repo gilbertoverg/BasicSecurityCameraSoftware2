@@ -108,23 +108,9 @@ public class HttpServer extends NanoHTTPD {
 				List<String> folders = session.getParameters().get("folder");
 				if(folders == null || folders.size() != 1) return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
 				String folder = folders.get(0);
-				String[] files = fileManager.getFolderFiles(folder);
-				if(files == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");
-				String json = "{\"files\":[";
-				for(int i = 0; i < files.length; i++) {
-					json += "\"" + files[i] + "\"";
-					if(i < files.length - 1) json += ",";
-				}
-				json += "]}";
+				String json = fileManager.getFiles(folder);
+				if(json == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");
 				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, json));
-			}
-			else if(session.getUri().equals("/data/fileInfoList")) {
-				List<String> folders = session.getParameters().get("folder");
-				if(folders == null || folders.size() != 1) return Response.newFixedLengthResponse(Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "BAD REQUEST");
-				String folder = folders.get(0);
-				String fileInfoList = fileManager.getFileInfoList(folder);
-				if(fileInfoList == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");
-				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, fileInfoList));
 			}
 			else if(session.getUri().equals("/data/fileFrame")) {
 				List<String> folders = session.getParameters().get("folder");

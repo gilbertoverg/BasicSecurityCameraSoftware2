@@ -43,7 +43,7 @@ public class FFmpegFileInfo {
 			
 			reader.close();
 			
-			return fileInfo;
+			if(fileInfo.getDurationSeconds() > 0 && fileInfo.getFps() > 0) return fileInfo;
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}

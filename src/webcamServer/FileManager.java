@@ -115,16 +115,14 @@ public class FileManager implements JpegListener {
 		return null;
 	}
 	
-	public String[] getFolderFiles(String folderName) {
+	public String getFiles(String folderName) {
 		try {
 			if(storageFolder == null) return null;
 			if(!matchString(folderName, FOLDER_PATTERN)) return null;
 			File folder = new File(storageFolder, folderName);
-			List<File> files = listFiles(folder, FILE_PATTERN);
-			if(files == null) return null;
-			String[] fileNames = new String[files.size()];
-			for(int i = 0; i < fileNames.length; i++) fileNames[i] = files.get(i).getName();
-			return fileNames;
+			File file = new File(folder, FILE_LIST_NAME);
+			if(!file.exists()) return null;
+			return new String(Files.readAllBytes(file.toPath()));
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}
@@ -141,21 +139,6 @@ public class FileManager implements JpegListener {
 			File file = new File(folder, fileName);
 			if(!file.exists()) return null;
 			return file;
-		} catch (Exception e) {
-			WebcamServer.logger.printLogException(e);
-		}
-		
-		return null;
-	}
-	
-	public String getFileInfoList(String folderName) {
-		try {
-			if(storageFolder == null) return null;
-			if(!matchString(folderName, FOLDER_PATTERN)) return null;
-			File folder = new File(storageFolder, folderName);
-			File file = new File(folder, FILE_LIST_NAME);
-			if(!file.exists()) return null;
-			return new String(Files.readAllBytes(file.toPath()));
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}
