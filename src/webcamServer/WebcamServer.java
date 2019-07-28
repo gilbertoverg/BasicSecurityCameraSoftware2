@@ -4,8 +4,8 @@ import java.io.*;
 import java.util.*;
 
 public class WebcamServer {
-	public static enum Encoder { MPEG4, H264, H265, COPY };
-	public static String VERSION = "2.3.0";
+	public static enum Encoder { MPEG4, H264, H264_QSV, H265, COPY };
+	public static String VERSION = "2.4.0";
 	public static Logger logger = new Logger();
 	
 	private static Configuration configuration = null;
