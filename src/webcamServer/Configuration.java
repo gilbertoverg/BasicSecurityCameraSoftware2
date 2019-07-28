@@ -220,6 +220,7 @@ public class Configuration {
 		if(s.equalsIgnoreCase("h264")) return WebcamServer.Encoder.H264;
 		if(s.equalsIgnoreCase("h264_qsv")) return WebcamServer.Encoder.H264_QSV;
 		if(s.equalsIgnoreCase("h265")) return WebcamServer.Encoder.H265;
+		if(s.equalsIgnoreCase("h265_qsv")) return WebcamServer.Encoder.H265_QSV;
 		if(s.equalsIgnoreCase("copy")) return WebcamServer.Encoder.COPY;
 		return null;
 	}

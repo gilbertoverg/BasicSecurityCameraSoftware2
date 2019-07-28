@@ -32,7 +32,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 				else if(encoder == WebcamServer.Encoder.H264 || encoder == WebcamServer.Encoder.H264_QSV) {
 					if(fileQuality < 1 || fileQuality > 51) throw new IllegalArgumentException("File quality out of range");
 				}
-				else if(encoder == WebcamServer. Encoder.H265) {
+				else if(encoder == WebcamServer. Encoder.H265 || encoder == WebcamServer. Encoder.H265_QSV) {
 					if(fileQuality < 1 || fileQuality > 51) throw new IllegalArgumentException("File quality out of range");
 				}
 				else throw new IllegalArgumentException("Unknown encoder");
@@ -117,6 +117,25 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 				
 				cmdList.add("-pix_fmt");
 				cmdList.add("yuv420p");
+			}
+			else if(encoder == WebcamServer.Encoder.H265_QSV) {
+				cmdList.add("-c:v");
+				cmdList.add("hevc_qsv");
+				
+				cmdList.add("-load_plugin");
+				cmdList.add("hevc_hw");
+				
+				cmdList.add("-tag:v");
+				cmdList.add("hvc1");
+				
+				cmdList.add("-g");
+				cmdList.add(Integer.toString(fileFrameRate));
+				
+				cmdList.add("-preset");
+				cmdList.add("faster");
+				
+				cmdList.add("-global_quality");
+				cmdList.add(Integer.toString(fileQuality));
 			}
 			else if(encoder == WebcamServer.Encoder.COPY) {
 				cmdList.add("-c:v");
