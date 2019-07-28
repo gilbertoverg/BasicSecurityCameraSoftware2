@@ -299,7 +299,7 @@
             imgWaiting = false;
             if (imgEnable) {
                 var ctx = document.getElementById("canvas").getContext("2d");
-                ctx.drawImage(img, 0, 0);
+                ctx.drawImage(img, 0, 0, width, height);
                 document.getElementById("tooltip").innerHTML = prevFileLoaded + " @ " + prevTimeLoaded.toFixed(3) + "s";
             }
             loadFrame();
