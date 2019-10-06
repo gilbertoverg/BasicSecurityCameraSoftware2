@@ -9,7 +9,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 	private final FFmpegProcess ffmpegProcess;
 	
 	private volatile Thread thread = null;
-	private volatile boolean killThread = false;
+	private volatile boolean killThread = false, restartFFmpeg = false;
 	
 	private volatile JpegListener jpegListener = null;
 
@@ -210,11 +210,16 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 		this.jpegListener = jpegListener;
 	}
 	
+	public synchronized void restartFFmpeg() {
+		restartFFmpeg = true;
+	}
+	
 	public synchronized void start() {
 		if(isRunning()) return;
 		
 		try {
 			killThread = false;
+			restartFFmpeg = false;
 			thread = new Thread() {
 				public void run() {
 					while(!killThread) {
@@ -235,6 +240,11 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 								}
 								if(ffmpegLogMonitor.isDuplicatingFrames()) {
 									WebcamServer.logger.printLogLn(false, "FFmpeg is repeating same frame");
+									break;
+								}
+								if(restartFFmpeg) {
+									WebcamServer.logger.printLogLn(false, "FFmpeg restart requested");
+									restartFFmpeg = false;
 									break;
 								}
 								Thread.sleep(1);

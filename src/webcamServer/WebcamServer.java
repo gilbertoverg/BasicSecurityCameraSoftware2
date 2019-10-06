@@ -5,13 +5,14 @@ import java.util.*;
 
 public class WebcamServer {
 	public static enum Encoder { MPEG4, H264, H264_QSV, H265, H265_QSV, COPY };
-	public static String VERSION = "2.4.0";
+	public static String VERSION = "2.4.1";
 	public static Logger logger = new Logger();
 	
 	private static Configuration configuration = null;
 	private static FileManager fileManager = null;
 	private static FFmpegWebcamReader ffmpegWebcamReader = null;
 	private static HttpServer httpServer = null;
+	private static SystemMonitor systemMonitor = null;
 	
 	public static void main(String[] args) {
 		logger.printLogLn(false, "Starting WebcamServer " + VERSION);
@@ -54,10 +55,21 @@ public class WebcamServer {
 							configuration.getStreamEnable(), configuration.getJpegWidth(), configuration.getJpegHeight(), configuration.getJpegFrameRate(),
 							configuration.getFileWidth(), configuration.getFileHeight());
 				}
+				
+				logger.printLogLn(false, "Initializing system monitor");
+				systemMonitor = new SystemMonitor(configuration.getFileFolder() == null ? 0 : configuration.getFileSegmentDuration(), ffmpegWebcamReader);
+				fileManager.setNewFileListener(systemMonitor);
 			
 				Runtime.getRuntime().addShutdownHook(new Thread() {
 					public void run() {
 						logger.printLogLn(false, "Closing WebcamServer");
+						
+						try {
+							systemMonitor.stop();
+							systemMonitor.waitStop();
+						} catch (Exception e) {
+							logger.printLogException(e);
+						}
 
 						try {
 							if(httpServer != null) {
@@ -89,6 +101,7 @@ public class WebcamServer {
 				fileManager.start();
 				ffmpegWebcamReader.start();
 				if(httpServer != null) httpServer.start();
+				systemMonitor.start();
 
 				handleConsole();
 			} catch (Exception e) {

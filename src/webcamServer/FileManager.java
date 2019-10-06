@@ -22,6 +22,8 @@ public class FileManager implements JpegListener {
 	private volatile boolean killThread = false, reIndex = false;
 	
 	private volatile byte[] lastJpeg = null;
+	
+	private volatile NewFileListener newFileListener = null;
 
 	public FileManager(File ffmpeg, File storageFolder, int maxFolders, int timelineQuality, boolean enableJpeg) {
 		this.ffmpegFileInfo = new FFmpegFileInfo(ffmpeg);
@@ -29,6 +31,10 @@ public class FileManager implements JpegListener {
 		this.storageFolder = storageFolder;
 		this.maxFolders = maxFolders;
 		this.enableJpeg = enableJpeg;
+	}
+	
+	public synchronized void setNewFileListener(NewFileListener newFileListener) {
+		this.newFileListener = newFileListener;
 	}
 	
 	public synchronized void start() {
@@ -199,6 +205,9 @@ public class FileManager implements JpegListener {
 					Files.move(tmpFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 					
 					updateFileList(newFile, newFolder);
+					
+					NewFileListener nfl = newFileListener;
+					if(nfl != null) nfl.newFile(newFile);
 				}
 			}
 			
