@@ -3,31 +3,46 @@ package webcamServer;
 import java.io.*;
 import listeners.*;
 
-public class SystemMonitor implements NewFileListener {
-	private final long fileGenerationPeriod;
+public class SystemMonitor implements NewFileListener, JpegListener, StatListener {
+	private final long jpegGenerationPeriod, fileGenerationPeriod;
 	private final FFmpegWebcamReader ffmpegWebcamReader;
 	
 	private volatile Thread thread = null;
 	private volatile boolean killThread = false;
 	
-	private volatile long lastTimeFileGenerated, millisDisabledFileGenerationCheck;
+	private volatile long lastTimeJpegGenerated, lastTimeFileGenerated, millisDisabledFileGenerationCheck;
+	private volatile int millisStartDisable;
 	
-	public SystemMonitor(long fileGenerationPeriod, FFmpegWebcamReader ffmpegWebcamReader) {
+	public SystemMonitor(long jpegGenerationFrequency, long fileGenerationPeriod, FFmpegWebcamReader ffmpegWebcamReader) {
+		if(jpegGenerationFrequency <= 0) this.jpegGenerationPeriod = 0;
+		else this.jpegGenerationPeriod = 1000000000L / jpegGenerationFrequency;
 		this.fileGenerationPeriod = fileGenerationPeriod * 1000000000L;
 		this.ffmpegWebcamReader = ffmpegWebcamReader;
+	}
+	
+	@Override
+	public synchronized void newJpeg(byte[] jpeg) {
+		lastTimeJpegGenerated = System.nanoTime();
 	}
 	
 	@Override
 	public synchronized void newFile(File file) {
 		lastTimeFileGenerated = System.nanoTime();
 	}
+	
+	@Override
+	public void resetStats() {
+		millisStartDisable = 30000;
+	}
 
 	public synchronized void start() {
 		if(isRunning()) return;
 		
 		try {
+			lastTimeJpegGenerated = System.nanoTime();
 			lastTimeFileGenerated = System.nanoTime();
 			millisDisabledFileGenerationCheck = 0;
+			millisStartDisable = 30000;
 			
 			killThread = false;
 			thread = new Thread() {
@@ -69,11 +84,25 @@ public class SystemMonitor implements NewFileListener {
 								if(millisDisabledFileGenerationCheck == 0) WebcamServer.logger.printLogLn(false, "File generation check re-enabled");
 							}
 							
-							if(fileGenerationPeriod > 0 && millisDisabledFileGenerationCheck == 0) {
-								if(nanoTime - lastTimeFileGenerated > fileGenerationPeriod * 2) {
-									WebcamServer.logger.printLogLn(false, "FFmpeg is not generating video files");
+							if(millisStartDisable > 0) {
+								if(millisStartDisable > 250) millisStartDisable -= 250;
+								else millisStartDisable = 0;
+								if(millisStartDisable == 0) WebcamServer.logger.printLogLn(true, "System monitor is controlling FFmpeg output");
+							}
+							else {
+								if(fileGenerationPeriod > 0 && millisDisabledFileGenerationCheck == 0) {
+									if(nanoTime - lastTimeFileGenerated > fileGenerationPeriod * 2) {
+										WebcamServer.logger.printLogLn(false, "FFmpeg is not generating video files");
+										ffmpegWebcamReader.restartFFmpeg();
+										lastTimeFileGenerated = nanoTime;
+										millisStartDisable = 30000;
+									}
+								}
+								if(jpegGenerationPeriod > 0 && nanoTime - lastTimeJpegGenerated > jpegGenerationPeriod * 30) {
+									WebcamServer.logger.printLogLn(false, "FFmpeg is not generating jpeg frames");
 									ffmpegWebcamReader.restartFFmpeg();
-									lastTimeFileGenerated = nanoTime;
+									lastTimeJpegGenerated = nanoTime;
+									millisStartDisable = 30000;
 								}
 							}
 						} catch (Exception e) {

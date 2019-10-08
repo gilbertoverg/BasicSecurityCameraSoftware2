@@ -11,7 +11,8 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 	private volatile Thread thread = null;
 	private volatile boolean killThread = false, restartFFmpeg = false;
 	
-	private volatile JpegListener jpegListener = null;
+	private volatile List<JpegListener> jpegListeners = new ArrayList<>();
+	private volatile List<StatListener> statListeners = new ArrayList<>();
 
 	public FFmpegWebcamReader(File ffmpeg, List<String> inputArguments,
 								File fileFolder, WebcamServer.Encoder encoder, int fileQuality, int fileWidth, int fileHeight, int fileFrameRate, int fileSegmentDuration,
@@ -206,8 +207,12 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 		ffmpegProcess.setLogListener(this);
 	}
 	
-	public synchronized void setJpegListener(JpegListener jpegListener) {
-		this.jpegListener = jpegListener;
+	public synchronized void addJpegListener(JpegListener jpegListener) {
+		if(jpegListener != null) jpegListeners.add(jpegListener);
+	}
+	
+	public synchronized void addStatListener(StatListener statListener) {
+		if(statListener != null) statListeners.add(statListener);
 	}
 	
 	public synchronized void restartFFmpeg() {
@@ -227,6 +232,8 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 							WebcamServer.logger.printLogLn(false, "Opening webcam");
 							ffmpegLogMonitor.reset();
 							ffmpegProcess.start();
+							for(StatListener sl : statListeners) sl.resetStats();
+							restartFFmpeg = false;
 
 							boolean started = false;
 							while(!killThread && ffmpegProcess.isRunning()) {
@@ -299,7 +306,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 	
 	@Override
 	public void newJpeg(byte[] jpeg) {
-		if(jpegListener != null) jpegListener.newJpeg(jpeg);
+		for(JpegListener jl : jpegListeners) jl.newJpeg(jpeg);
 	}
 
 	@Override

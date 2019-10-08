@@ -47,7 +47,7 @@ public class WebcamServer {
 				ffmpegWebcamReader = new FFmpegWebcamReader(configuration.getFFmpeg(), configuration.getInputArguments(),
 						configuration.getFileFolder(), configuration.getFileEncoder(), configuration.getFileQuality(), configuration.getFileWidth(), configuration.getFileHeight(), configuration.getFileFrameRate(), configuration.getFileSegmentDuration(),
 						configuration.getStreamEnable(), configuration.getJpegQuality(), configuration.getJpegWidth(), configuration.getJpegHeight(), configuration.getJpegFrameRate());
-				ffmpegWebcamReader.setJpegListener(fileManager);
+				ffmpegWebcamReader.addJpegListener(fileManager);
 				
 				if(configuration.getHttpPort() > 0) {
 					logger.printLogLn(false, "Initializing web server");
@@ -57,8 +57,12 @@ public class WebcamServer {
 				}
 				
 				logger.printLogLn(false, "Initializing system monitor");
-				systemMonitor = new SystemMonitor(configuration.getFileFolder() == null ? 0 : configuration.getFileSegmentDuration(), ffmpegWebcamReader);
+				systemMonitor = new SystemMonitor(configuration.getStreamEnable() ? configuration.getJpegFrameRate() : 0,
+						configuration.getFileFolder() == null ? 0 : configuration.getFileSegmentDuration(),
+						ffmpegWebcamReader);
 				fileManager.setNewFileListener(systemMonitor);
+				ffmpegWebcamReader.addJpegListener(systemMonitor);
+				ffmpegWebcamReader.addStatListener(systemMonitor);
 			
 				Runtime.getRuntime().addShutdownHook(new Thread() {
 					public void run() {
