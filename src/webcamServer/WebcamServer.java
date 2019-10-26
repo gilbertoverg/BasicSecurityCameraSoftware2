@@ -59,7 +59,8 @@ public class WebcamServer {
 				logger.printLogLn(false, "Initializing system monitor");
 				systemMonitor = new SystemMonitor(configuration.getStreamEnable() ? configuration.getJpegFrameRate() : 0,
 						configuration.getFileFolder() == null ? 0 : configuration.getFileSegmentDuration(),
-						ffmpegWebcamReader);
+						ffmpegWebcamReader,
+						fileManager);
 				fileManager.setNewFileListener(systemMonitor);
 				ffmpegWebcamReader.addJpegListener(systemMonitor);
 				ffmpegWebcamReader.addStatListener(systemMonitor);

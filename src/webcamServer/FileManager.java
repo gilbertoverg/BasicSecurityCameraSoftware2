@@ -2,6 +2,9 @@ package webcamServer;
 
 import java.io.*;
 import java.nio.file.*;
+import java.time.*;
+import java.time.format.*;
+import java.time.temporal.*;
 import java.util.*;
 import listeners.*;
 
@@ -19,7 +22,8 @@ public class FileManager implements JpegListener {
 	private final boolean enableJpeg;
 	
 	private volatile Thread thread = null;
-	private volatile boolean killThread = false, reIndex = false;
+	private volatile boolean killThread = false, reIndex = false, enable = true;
+	private volatile File tmpFileBeforeDisable = null;
 	
 	private volatile byte[] lastJpeg = null;
 	
@@ -35,6 +39,20 @@ public class FileManager implements JpegListener {
 	
 	public synchronized void setNewFileListener(NewFileListener newFileListener) {
 		this.newFileListener = newFileListener;
+	}
+	
+	public synchronized void enable(boolean enable) {
+		this.enable = enable;
+		if(!enable) {
+			tmpFileBeforeDisable = null;
+			try {
+				File tmp = new File(storageFolder, "tmp");
+				List<File> tmpFiles = listFiles(tmp, TMP_FILE_PATTERN);
+				if(tmpFiles.size() == 1) tmpFileBeforeDisable = tmpFiles.get(0);
+			} catch (Exception e) {
+				WebcamServer.logger.printLogException(e);
+			}
+		}
 	}
 	
 	public synchronized void start() {
@@ -65,7 +83,7 @@ public class FileManager implements JpegListener {
 						WebcamServer.logger.printLogLn(false, "File manager started");
 
 						while(!killThread) {
-							manageTask(false);
+							if(enable) manageTask(false);
 
 							for(int i = 0; i < 100 && !killThread; i++) {
 								Thread.sleep(10);
@@ -186,9 +204,18 @@ public class FileManager implements JpegListener {
 	private void manageTask(boolean finalize) {
 		try {
 			File tmp = new File(storageFolder, "tmp");
-			
 			List<File> tmpFiles = listFiles(tmp, TMP_FILE_PATTERN);
 			if(tmpFiles != null) {
+				if(tmpFileBeforeDisable != null) {
+					tmpFiles.add(0, tmpFileBeforeDisable);
+					for(int i = 1; i < tmpFiles.size(); i++) {
+						if(tmpFiles.get(i).getName().equals(tmpFileBeforeDisable.getName())) {
+							tmpFiles.remove(i);
+							break;
+						}
+					}
+					tmpFileBeforeDisable = null;
+				}
 				while(tmpFiles.size() >= (finalize ? 1 : 2)) {
 					File tmpFile = tmpFiles.remove(0);
 					
@@ -201,6 +228,13 @@ public class FileManager implements JpegListener {
 					}
 					
 					File newFile = new File(newFolder, tmpFile.getName().substring(4));
+					
+					if(newFile.exists()) {
+						WebcamServer.logger.printLogLn(false, "File already exists: " + newFile.getName());
+						newFile = findNewFileName(newFolder, newFile.getName());
+						WebcamServer.logger.printLogLn(false, "Found new name: " + newFile.getName());
+					}
+					
 					WebcamServer.logger.printLogLn(true, "Moving file: " + newFile.getName());
 					Files.move(tmpFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 					
@@ -229,6 +263,19 @@ public class FileManager implements JpegListener {
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}
+	}
+	
+	private File findNewFileName(File folder, String fileName) {
+		fileName = fileName.substring(0, fileName.length() - 4);
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+		LocalDateTime dateTime = LocalDateTime.from(formatter.parse(fileName));
+		File output = null;
+		do {
+			fileName = dateTime.format(formatter) + ".mp4";
+			output = new File(folder, fileName);
+			dateTime = dateTime.plus(1, ChronoUnit.SECONDS);
+		} while(output.exists());
+		return output;
 	}
 	
 	private void reindex() {

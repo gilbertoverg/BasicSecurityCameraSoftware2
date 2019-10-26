@@ -6,6 +6,7 @@ import listeners.*;
 public class SystemMonitor implements NewFileListener, JpegListener, StatListener {
 	private final long jpegGenerationPeriod, fileGenerationPeriod;
 	private final FFmpegWebcamReader ffmpegWebcamReader;
+	private final FileManager fileManager;
 	
 	private volatile Thread thread = null;
 	private volatile boolean killThread = false;
@@ -13,11 +14,12 @@ public class SystemMonitor implements NewFileListener, JpegListener, StatListene
 	private volatile long lastTimeJpegGenerated, lastTimeFileGenerated, millisDisabledFileGenerationCheck;
 	private volatile int millisStartDisable;
 	
-	public SystemMonitor(long jpegGenerationFrequency, long fileGenerationPeriod, FFmpegWebcamReader ffmpegWebcamReader) {
+	public SystemMonitor(long jpegGenerationFrequency, long fileGenerationPeriod, FFmpegWebcamReader ffmpegWebcamReader, FileManager fileManager) {
 		if(jpegGenerationFrequency <= 0) this.jpegGenerationPeriod = 0;
 		else this.jpegGenerationPeriod = 1000000000L / jpegGenerationFrequency;
 		this.fileGenerationPeriod = fileGenerationPeriod * 1000000000L;
 		this.ffmpegWebcamReader = ffmpegWebcamReader;
+		this.fileManager = fileManager;
 	}
 	
 	@Override
@@ -75,13 +77,20 @@ public class SystemMonitor implements NewFileListener, JpegListener, StatListene
 								if(fileGenerationPeriod > 0) {
 									millisDisabledFileGenerationCheck = Math.abs(millisDifference * 2);
 									WebcamServer.logger.printLogLn(false, "File generation check disabled");
+									ffmpegWebcamReader.ignoreFFmpegLog(true);
+									fileManager.enable(false);
 								}
 							}
 							else if(millisDisabledFileGenerationCheck > 0) {
 								if(millisDisabledFileGenerationCheck > 250) millisDisabledFileGenerationCheck -= 250;
 								else millisDisabledFileGenerationCheck = 0;
 
-								if(millisDisabledFileGenerationCheck == 0) WebcamServer.logger.printLogLn(false, "File generation check re-enabled");
+								if(millisDisabledFileGenerationCheck == 0) {
+									WebcamServer.logger.printLogLn(false, "File generation check re-enabled");
+									ffmpegWebcamReader.ignoreFFmpegLog(false);
+									fileManager.enable(true);
+									millisStartDisable = 30000;
+								}
 							}
 							
 							if(millisStartDisable > 0) {

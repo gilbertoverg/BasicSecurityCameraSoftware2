@@ -9,7 +9,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 	private final FFmpegProcess ffmpegProcess;
 	
 	private volatile Thread thread = null;
-	private volatile boolean killThread = false, restartFFmpeg = false;
+	private volatile boolean killThread = false, restartFFmpeg = false, ignoreFFmpegLog = false;
 	
 	private volatile List<JpegListener> jpegListeners = new ArrayList<>();
 	private volatile List<StatListener> statListeners = new ArrayList<>();
@@ -219,6 +219,10 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 		restartFFmpeg = true;
 	}
 	
+	public synchronized void ignoreFFmpegLog(boolean ignore) {
+		ignoreFFmpegLog = ignore;
+	}
+	
 	public synchronized void start() {
 		if(isRunning()) return;
 		
@@ -237,17 +241,19 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 
 							boolean started = false;
 							while(!killThread && ffmpegProcess.isRunning()) {
-								if(ffmpegLogMonitor.isStarted() && !started) {
-									WebcamServer.logger.printLogLn(false, "Webcam opened");
-									started = true;
-								}
-								if(!ffmpegLogMonitor.isAlive()) {
-									WebcamServer.logger.printLogLn(false, "FFmpeg is not responding");
-									break;
-								}
-								if(ffmpegLogMonitor.isDuplicatingFrames()) {
-									WebcamServer.logger.printLogLn(false, "FFmpeg is repeating same frame");
-									break;
+								if(!ignoreFFmpegLog) {
+									if(ffmpegLogMonitor.isStarted() && !started) {
+										WebcamServer.logger.printLogLn(false, "Webcam opened");
+										started = true;
+									}
+									if(!ffmpegLogMonitor.isAlive()) {
+										WebcamServer.logger.printLogLn(false, "FFmpeg is not responding");
+										break;
+									}
+									if(ffmpegLogMonitor.isDuplicatingFrames()) {
+										WebcamServer.logger.printLogLn(false, "FFmpeg is repeating same frame");
+										break;
+									}
 								}
 								if(restartFFmpeg) {
 									WebcamServer.logger.printLogLn(false, "FFmpeg restart requested");
