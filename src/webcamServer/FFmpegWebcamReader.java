@@ -4,7 +4,7 @@ import java.io.*;
 import java.util.*;
 import listeners.*;
 
-public class FFmpegWebcamReader implements JpegListener, LogListener {
+public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFileListener {
 	private final FFmpegLogMonitor ffmpegLogMonitor;
 	private final FFmpegProcess ffmpegProcess;
 	
@@ -13,6 +13,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 	
 	private volatile List<JpegListener> jpegListeners = new ArrayList<>();
 	private volatile List<StatListener> statListeners = new ArrayList<>();
+	private volatile List<NewTmpFileListener> newTmpFileListeners = new ArrayList<>();
 
 	public FFmpegWebcamReader(File ffmpeg, List<String> inputArguments,
 								File fileFolder, WebcamServer.Encoder encoder, int fileQuality, int fileWidth, int fileHeight, int fileFrameRate, int fileSegmentDuration,
@@ -201,6 +202,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 		WebcamServer.logger.printLogLn(true, "FFmpeg command: " + Arrays.toString(cmdArray));
 		
 		ffmpegLogMonitor = new FFmpegLogMonitor(30000, 0.75, 15);
+		ffmpegLogMonitor.setNewTmpFileListener(this);
 		
 		ffmpegProcess = new FFmpegProcess(cmdArray);
 		ffmpegProcess.setJpegListener(this);
@@ -213,6 +215,10 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 	
 	public synchronized void addStatListener(StatListener statListener) {
 		if(statListener != null) statListeners.add(statListener);
+	}
+	
+	public synchronized void addNewTmpFileListener(NewTmpFileListener newTmpFileListener) {
+		if(newTmpFileListener != null) newTmpFileListeners.add(newTmpFileListener);
 	}
 	
 	public synchronized void restartFFmpeg() {
@@ -324,5 +330,10 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 	@Override
 	public void newLogLine(String line) {
 		ffmpegLogMonitor.update(line);
+	}
+
+	@Override
+	public void newTmpFile(String file) {
+		for(NewTmpFileListener ntfl : newTmpFileListeners) ntfl.newTmpFile(file);
 	}
 }

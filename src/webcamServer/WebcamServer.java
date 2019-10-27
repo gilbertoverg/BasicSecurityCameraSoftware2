@@ -48,6 +48,7 @@ public class WebcamServer {
 						configuration.getFileFolder(), configuration.getFileEncoder(), configuration.getFileQuality(), configuration.getFileWidth(), configuration.getFileHeight(), configuration.getFileFrameRate(), configuration.getFileSegmentDuration(),
 						configuration.getStreamEnable(), configuration.getJpegQuality(), configuration.getJpegWidth(), configuration.getJpegHeight(), configuration.getJpegFrameRate());
 				ffmpegWebcamReader.addJpegListener(fileManager);
+				ffmpegWebcamReader.addNewTmpFileListener(fileManager);
 				
 				if(configuration.getHttpPort() > 0) {
 					logger.printLogLn(false, "Initializing web server");

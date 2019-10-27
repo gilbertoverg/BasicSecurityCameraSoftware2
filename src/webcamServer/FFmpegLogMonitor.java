@@ -1,11 +1,16 @@
 package webcamServer;
 
+import listeners.*;
+
 public class FFmpegLogMonitor {
 	private final long timeout, dupCounterThreshold;
 	private final double dupThreshold;
 	
 	private volatile long lastLogTime;
 	private volatile long lastFrame, lastDup, dupCounter;
+	private volatile String currentFile = null;
+	
+	private volatile NewTmpFileListener newTmpFileListener = null;
 
 	public FFmpegLogMonitor(long timeoutMilliseconds, double dupThreshold, long dupCounterThreshold) {
 		this.timeout = timeoutMilliseconds * 1000000L;
@@ -15,16 +20,22 @@ public class FFmpegLogMonitor {
 		reset();
 	}
 	
+	public synchronized void setNewTmpFileListener(NewTmpFileListener newTmpFileListener) {
+		this.newTmpFileListener = newTmpFileListener;
+	}
+	
 	public synchronized void reset() {
 		lastLogTime = System.nanoTime();
 		lastFrame = 0;
 		lastDup = 0;
 		dupCounter = 0;
+		currentFile = null;
 	}
 	
 	public synchronized void update(String line) {
 		try {
 			if(line == null) return;
+			
 			int frameIndex = line.indexOf("frame=");
 			if(frameIndex >= 0) {
 				long frame = readNumber(line, frameIndex + 6);
@@ -41,9 +52,21 @@ public class FFmpegLogMonitor {
 				}
 				lastFrame = frame;
 			}
+			
+			if(line.contains("Opening") && line.contains("for writing")) {
+				int ind = line.lastIndexOf("TMP_");
+				if(ind > 0) {
+					currentFile = line.substring(ind, line.indexOf(".mp4", ind) + 4);
+					if(newTmpFileListener != null) newTmpFileListener.newTmpFile(currentFile);
+				}
+			}
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}
+	}
+	
+	public synchronized String getCurrentFile() {
+		return currentFile;
 	}
 	
 	public synchronized boolean isAlive() {

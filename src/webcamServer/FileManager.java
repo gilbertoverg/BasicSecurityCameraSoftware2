@@ -9,7 +9,7 @@ import java.time.temporal.*;
 import java.util.*;
 import listeners.*;
 
-public class FileManager implements JpegListener {
+public class FileManager implements JpegListener, NewTmpFileListener {
 	private final String TMP_FILE_PATTERN = "TMP_????-??-??_??-??-??.mp4";
 	private final String FILE_PATTERN = "????-??-??_??-??-??.mp4";
 	private final String FOLDER_PATTERN = "????-??-??";
@@ -29,6 +29,7 @@ public class FileManager implements JpegListener {
 	private volatile Object tmpFileForceFirstLock = new Object();
 	
 	private volatile byte[] lastJpeg = null;
+	private volatile String currentTmpFile = null;
 	
 	private volatile NewFileListener newFileListener = null;
 
@@ -212,6 +213,11 @@ public class FileManager implements JpegListener {
 		lastJpeg = jpeg;
 	}
 	
+	@Override
+	public void newTmpFile(String file) {
+		currentTmpFile = file;
+	}
+	
 	public void activateReIndex() {
 		reIndex = true;
 	}
@@ -236,10 +242,16 @@ public class FileManager implements JpegListener {
 						
 						Thread.sleep(500);
 						
+						String currentTmpFile = this.currentTmpFile;
+						if(!finalize && currentTmpFile != null && currentTmpFile.equals(tmpFile.getName())) {
+							WebcamServer.logger.printLogLn(true, "File " + tmpFile.getName() + " is locked");
+							return;
+						}
+						
 						BasicFileAttributes attr = Files.readAttributes(tmpFile.toPath(), BasicFileAttributes.class);
 						long size = attr.size();
-						if(!finalize && size <= 32768) {
-							WebcamServer.logger.printLogLn(false, "File " + tmpFile.getName() + " is small, size: " + size);
+						if(!finalize && size <= 4096) {
+							WebcamServer.logger.printLogLn(true, "File " + tmpFile.getName() + " is small, size: " + size);
 							return;
 						}
 						tmpFileForceFirst = null;
