@@ -2,6 +2,7 @@ package webcamServer;
 
 import java.io.*;
 import java.nio.file.*;
+import java.nio.file.attribute.*;
 import java.time.*;
 import java.time.format.*;
 import java.time.temporal.*;
@@ -235,7 +236,12 @@ public class FileManager implements JpegListener {
 						
 						Thread.sleep(500);
 						
-						if(!finalize && tmpFile.length() < 2048) return;
+						BasicFileAttributes attr = Files.readAttributes(tmpFile.toPath(), BasicFileAttributes.class);
+						long size = attr.size();
+						if(!finalize && size <= 32768) {
+							WebcamServer.logger.printLogLn(false, "File " + tmpFile.getName() + " is small, size: " + size);
+							return;
+						}
 						tmpFileForceFirst = null;
 						
 						File newFolder = new File(storageFolder, tmpFile.getName().substring(4, 14));
