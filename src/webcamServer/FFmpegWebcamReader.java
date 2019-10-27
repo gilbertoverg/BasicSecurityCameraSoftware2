@@ -9,7 +9,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 	private final FFmpegProcess ffmpegProcess;
 	
 	private volatile Thread thread = null;
-	private volatile boolean killThread = false, restartFFmpeg = false, ignoreFFmpegLog = false;
+	private volatile boolean killThread = false, restartFFmpeg = false, enableFFmpegLog = true;
 	
 	private volatile List<JpegListener> jpegListeners = new ArrayList<>();
 	private volatile List<StatListener> statListeners = new ArrayList<>();
@@ -219,8 +219,12 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 		restartFFmpeg = true;
 	}
 	
-	public synchronized void ignoreFFmpegLog(boolean ignore) {
-		ignoreFFmpegLog = ignore;
+	public synchronized void enableFFmpegLog(boolean enable) {
+		enableFFmpegLog = enable;
+	}
+	
+	public synchronized boolean isFFmpegLogEnabled() {
+		return enableFFmpegLog;
 	}
 	
 	public synchronized void start() {
@@ -234,6 +238,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 					while(!killThread) {
 						try {
 							WebcamServer.logger.printLogLn(false, "Opening webcam");
+							enableFFmpegLog = true;
 							ffmpegLogMonitor.reset();
 							ffmpegProcess.start();
 							for(StatListener sl : statListeners) sl.resetStats();
@@ -241,7 +246,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 
 							boolean started = false;
 							while(!killThread && ffmpegProcess.isRunning()) {
-								if(!ignoreFFmpegLog) {
+								if(enableFFmpegLog) {
 									if(ffmpegLogMonitor.isStarted() && !started) {
 										WebcamServer.logger.printLogLn(false, "Webcam opened");
 										started = true;
@@ -255,6 +260,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener {
 										break;
 									}
 								}
+								else ffmpegLogMonitor.reset();
 								if(restartFFmpeg) {
 									WebcamServer.logger.printLogLn(false, "FFmpeg restart requested");
 									restartFFmpeg = false;

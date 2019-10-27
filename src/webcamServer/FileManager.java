@@ -22,8 +22,10 @@ public class FileManager implements JpegListener {
 	private final boolean enableJpeg;
 	
 	private volatile Thread thread = null;
-	private volatile boolean killThread = false, reIndex = false, enable = true;
-	private volatile File tmpFileBeforeDisable = null;
+	private volatile boolean killThread = false, reIndex = false;
+	
+	private volatile File tmpFileForceFirst = null;
+	private volatile Object tmpFileForceFirstLock = new Object();
 	
 	private volatile byte[] lastJpeg = null;
 	
@@ -41,14 +43,26 @@ public class FileManager implements JpegListener {
 		this.newFileListener = newFileListener;
 	}
 	
-	public synchronized void enable(boolean enable) {
-		this.enable = enable;
-		if(!enable) {
-			tmpFileBeforeDisable = null;
+	public void timeChanged() {
+		synchronized (tmpFileForceFirstLock) {
+			tmpFileForceFirst = null;
+			if(storageFolder == null) return;
 			try {
+				LocalDateTime now = LocalDateTime.now();
 				File tmp = new File(storageFolder, "tmp");
 				List<File> tmpFiles = listFiles(tmp, TMP_FILE_PATTERN);
-				if(tmpFiles.size() == 1) tmpFileBeforeDisable = tmpFiles.get(0);
+				if(tmpFiles != null) {
+					DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+					long maxDistance = -1;
+					for(File f : tmpFiles) {
+						LocalDateTime fileTime = LocalDateTime.from(formatter.parse(f.getName().subSequence(4, 23)));
+						long distance = Math.abs(ChronoUnit.SECONDS.between(now, fileTime));
+						if(distance > maxDistance) {
+							maxDistance = distance;
+							tmpFileForceFirst = f;
+						}
+					}
+				}
 			} catch (Exception e) {
 				WebcamServer.logger.printLogException(e);
 			}
@@ -83,7 +97,7 @@ public class FileManager implements JpegListener {
 						WebcamServer.logger.printLogLn(false, "File manager started");
 
 						while(!killThread) {
-							if(enable) manageTask(false);
+							manageTask(false);
 
 							for(int i = 0; i < 100 && !killThread; i++) {
 								Thread.sleep(10);
@@ -203,45 +217,49 @@ public class FileManager implements JpegListener {
 	
 	private void manageTask(boolean finalize) {
 		try {
-			File tmp = new File(storageFolder, "tmp");
-			List<File> tmpFiles = listFiles(tmp, TMP_FILE_PATTERN);
-			if(tmpFiles != null) {
-				if(tmpFileBeforeDisable != null) {
-					tmpFiles.add(0, tmpFileBeforeDisable);
-					for(int i = 1; i < tmpFiles.size(); i++) {
-						if(tmpFiles.get(i).getName().equals(tmpFileBeforeDisable.getName())) {
-							tmpFiles.remove(i);
-							break;
+			synchronized (tmpFileForceFirstLock) {
+				File tmp = new File(storageFolder, "tmp");
+				List<File> tmpFiles = listFiles(tmp, TMP_FILE_PATTERN);
+				if(tmpFiles != null) {
+					if(tmpFileForceFirst != null) {
+						tmpFiles.add(0, tmpFileForceFirst);
+						for(int i = 1; i < tmpFiles.size(); i++) {
+							if(tmpFiles.get(i).getName().equals(tmpFileForceFirst.getName())) {
+								tmpFiles.remove(i);
+								break;
+							}
 						}
 					}
-					tmpFileBeforeDisable = null;
-				}
-				while(tmpFiles.size() >= (finalize ? 1 : 2)) {
-					File tmpFile = tmpFiles.remove(0);
-					
-					Thread.sleep(500);
-					
-					File newFolder = new File(storageFolder, tmpFile.getName().substring(4, 14));
-					if(!newFolder.exists()) {
-						WebcamServer.logger.printLogLn(false, "Creating folder: " + newFolder.getName());
-						newFolder.mkdir();
+					while(tmpFiles.size() >= (finalize ? 1 : 2)) {
+						File tmpFile = tmpFiles.remove(0);
+						
+						Thread.sleep(500);
+						
+						if(!finalize && tmpFile.length() < 2048) return;
+						tmpFileForceFirst = null;
+						
+						File newFolder = new File(storageFolder, tmpFile.getName().substring(4, 14));
+						if(!newFolder.exists()) {
+							WebcamServer.logger.printLogLn(false, "Creating folder: " + newFolder.getName());
+							newFolder.mkdir();
+						}
+						
+						File newFile = new File(newFolder, tmpFile.getName().substring(4));
+						
+						if(newFile.exists()) {
+							WebcamServer.logger.printLogLn(false, "File already exists: " + newFile.getName());
+							newFile = findNewFileName(newFolder, newFile.getName());
+							WebcamServer.logger.printLogLn(false, "Found new name: " + newFile.getName());
+						}
+						
+						WebcamServer.logger.printLogLn(true, "Moving file: " + newFile.getName());
+						Files.move(tmpFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+						
+						updateFileList(newFile, newFolder);
+						
+						NewFileListener nfl = newFileListener;
+						if(nfl != null) nfl.newFile(newFile);
 					}
-					
-					File newFile = new File(newFolder, tmpFile.getName().substring(4));
-					
-					if(newFile.exists()) {
-						WebcamServer.logger.printLogLn(false, "File already exists: " + newFile.getName());
-						newFile = findNewFileName(newFolder, newFile.getName());
-						WebcamServer.logger.printLogLn(false, "Found new name: " + newFile.getName());
-					}
-					
-					WebcamServer.logger.printLogLn(true, "Moving file: " + newFile.getName());
-					Files.move(tmpFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-					
-					updateFileList(newFile, newFolder);
-					
-					NewFileListener nfl = newFileListener;
-					if(nfl != null) nfl.newFile(newFile);
 				}
 			}
 			
