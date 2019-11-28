@@ -263,6 +263,28 @@ public class Configuration {
 		return out;
 	}
 	
+	private String cleanLine(String line) {
+		String out = "";
+		if(line == null) return out;
+		
+		for(int i = 0; i < line.length(); i++) {
+			char c = line.charAt(i);
+			
+			if(c == '\\') {
+				if(i < line.length() - 1 && line.charAt(i + 1) == '#') {
+					out += '#';
+					i++;
+				}
+				else out += '\\';
+			}
+			else if(c == '#') return out;
+			else if(c < ' ') out += ' ';
+			else out += c;
+		}
+		
+		return out;
+	}
+	
 	private String getValue(String key, String txt) {
 		String value = null;
 		
@@ -271,10 +293,9 @@ public class Configuration {
 			while(scanner.hasNextLine()) {
 				String line = scanner.nextLine();
 				
-				int i = line.indexOf('#');
-				if(i >= 0) line = line.substring(0, i);
+				line = cleanLine(line);
 				
-				i = line.indexOf(':');
+				int i = line.indexOf(':');
 				if(i >= 0) {
 					String keyLine = line.substring(0, i).trim();
 					if(key.equals(keyLine)) {
