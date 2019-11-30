@@ -74,7 +74,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 				cmdList.add("libx264");
 				
 				cmdList.add("-x264-params");
-				cmdList.add("keyint=" + Integer.toString(fileFrameRate) + ":scenecut=0");
+				cmdList.add("keyint=" + Integer.toString(fileFrameRate * mcd(20, fileSegmentDuration)) + ":scenecut=0");
 				
 				cmdList.add("-preset");
 				cmdList.add("faster");
@@ -90,7 +90,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 				cmdList.add("h264_qsv");
 				
 				cmdList.add("-g");
-				cmdList.add(Integer.toString(fileFrameRate));
+				cmdList.add(Integer.toString(fileFrameRate * mcd(20, fileSegmentDuration)));
 				
 				cmdList.add("-preset");
 				cmdList.add("faster");
@@ -109,7 +109,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 				cmdList.add("hvc1");
 				
 				cmdList.add("-x265-params");
-				cmdList.add("keyint=" + Integer.toString(fileFrameRate) + ":scenecut=0");
+				cmdList.add("keyint=" + Integer.toString(fileFrameRate * mcd(20, fileSegmentDuration)) + ":scenecut=0");
 				
 				cmdList.add("-preset");
 				cmdList.add("faster");
@@ -131,7 +131,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 				cmdList.add("hvc1");
 				
 				cmdList.add("-g");
-				cmdList.add(Integer.toString(fileFrameRate));
+				cmdList.add(Integer.toString(fileFrameRate * mcd(20, fileSegmentDuration)));
 				
 				cmdList.add("-preset");
 				cmdList.add("faster");
@@ -157,9 +157,6 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 			
 			cmdList.add("-f");
 			cmdList.add("segment");
-			
-			cmdList.add("-segment_atclocktime");
-			cmdList.add("1");
 			
 			cmdList.add("-segment_time");
 			cmdList.add(Integer.toString(fileSegmentDuration));
@@ -320,6 +317,21 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 
 			}
 		}
+	}
+	
+	private int mcd(int i, int j) {
+		if(i < 1) return 0;
+		if(j < 1) return 0;
+		int a = i;
+		if(j > i) {
+			i = j;
+			j = a;
+		}
+		while((a = i % j) != 0) {
+			i = j;
+			j = a;
+		}
+		return j;
 	}
 	
 	@Override
