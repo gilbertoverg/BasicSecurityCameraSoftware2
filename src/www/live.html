@@ -142,7 +142,7 @@
 
         function refreshImage() {
             imgTime = performance.now();
-            img.src = "/data/frame?t=" + imgTime;
+            img.src = "/data/frame?t=" + imgTime.toFixed(1);
         };
 
         function scheduleRefreshImage() {
