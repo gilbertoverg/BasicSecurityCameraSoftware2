@@ -241,11 +241,11 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 					while(!killThread) {
 						try {
 							WebcamServer.logger.printLogLn(false, "Opening webcam");
-							enableFFmpegLog = true;
 							ffmpegLogMonitor.reset();
-							ffmpegProcess.start();
 							for(StatListener sl : statListeners) sl.resetStats();
 							restartFFmpeg = false;
+							enableFFmpegLog = true;
+							ffmpegProcess.start();
 
 							boolean started = false;
 							while(!killThread && ffmpegProcess.isRunning()) {

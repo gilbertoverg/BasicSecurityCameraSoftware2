@@ -46,7 +46,7 @@ public class FFmpegFrameGrabber {
 			
 			InputStream inputStream = process.getInputStream();
 			ByteArrayOutputStream baos = new ByteArrayOutputStream(JPEG_INITIAL_BUFFER_SIZE);
-			for(int i = readByteStream(inputStream); i != -1; i = readByteStream(inputStream)) baos.write(i);
+			for(int i = Utils.readByteStream(inputStream); i != -1; i = Utils.readByteStream(inputStream)) baos.write(i);
 			inputStream.close();
 			
 			if(baos.size() == 0) return null;
@@ -56,17 +56,5 @@ public class FFmpegFrameGrabber {
 		}
 		
 		return null;
-	}
-	
-	private int readByteStream(InputStream is) {
-		try {
-			return is.read();
-		} catch (IOException e) {
-			
-		} catch (Exception e) {
-			WebcamServer.logger.printLogException(e);
-		}
-		
-		return -1;
 	}
 }

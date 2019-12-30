@@ -16,7 +16,7 @@ public class Logger {
 			String trace = "[" + LocalDateTime.now().format(formatter) + "] Throwable: " + e + "\r\n";
 			for (StackTraceElement e1 : e.getStackTrace()) trace += "\tat " + e1.toString() + "\r\n";
 			System.out.print(trace);
-		} catch (Exception ex) {
+		} catch (Throwable ex) {
 			
 		}
 	}
@@ -26,7 +26,7 @@ public class Logger {
 			String trace = "[" + LocalDateTime.now().format(formatter) + "] Exception: " + e + "\r\n";
 			for (StackTraceElement e1 : e.getStackTrace()) trace += "\tat " + e1.toString() + "\r\n";
 			System.out.print(trace);
-		} catch (Exception ex) {
+		} catch (Throwable ex) {
 
 		}
 	}
@@ -36,7 +36,7 @@ public class Logger {
 			String trace = "[" + LocalDateTime.now().format(formatter) + "] Error: " + e + "\r\n";
 			for (StackTraceElement e1 : e.getStackTrace()) trace += "\tat " + e1.toString() + "\r\n";
 			System.out.print(trace);
-		} catch (Exception ex) {
+		} catch (Throwable ex) {
 			
 		}
 	}
@@ -46,7 +46,7 @@ public class Logger {
 			if(debugMessage && !debug) return;
 			String s = "[" + LocalDateTime.now().format(formatter) + "] " + txt;
 			System.out.print(s);
-		} catch (Exception ex) {
+		} catch (Throwable ex) {
 			
 		}
 	}
@@ -56,7 +56,7 @@ public class Logger {
 			if(debugMessage && !debug) return;
 			String s = "[" + LocalDateTime.now().format(formatter) + "] " + txt + "\r\n";
 			System.out.print(s);
-		} catch (Exception ex) {
+		} catch (Throwable ex) {
 			
 		}
 	}

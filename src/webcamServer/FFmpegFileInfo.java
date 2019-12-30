@@ -32,6 +32,10 @@ public class FFmpegFileInfo {
 						if(line.startsWith("Stream") && line.contains("Video:")) {
 							double fps = parseFps(line);
 							fileInfo.setFps(fps);
+							int width = parseWidth(line);
+							fileInfo.setWidth(width);
+							int height = parseHeight(line);
+							fileInfo.setHeight(height);
 						}
 					} catch (Exception e) {
 						WebcamServer.logger.printLogException(e);
@@ -43,7 +47,7 @@ public class FFmpegFileInfo {
 			
 			reader.close();
 			
-			if(fileInfo.getDurationSeconds() > 0 && fileInfo.getFps() > 0) return fileInfo;
+			if(fileInfo.getDurationSeconds() > 0 && fileInfo.getFps() > 0 && fileInfo.getWidth() > 0 && fileInfo.getHeight() > 0) return fileInfo;
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}
@@ -85,6 +89,44 @@ public class FFmpegFileInfo {
 			if(start < end) return Double.parseDouble(line.substring(start + 1, end + 1));
 		}
 		
+		return 0;
+	}
+	
+	private int parseWidth(String line) {
+		for(int i = 0; i < line.length(); i++) {
+			if(line.charAt(i) == ' ') {
+				int width = 0;
+				for(i++; i < line.length() && line.charAt(i) >= '0' && line.charAt(i) <= '9'; i++) {
+					width = width * 10 + line.charAt(i) - '0';
+				}
+				if(i < line.length() && line.charAt(i) == 'x') {
+					int height = 0;
+					for(i++; i < line.length() && line.charAt(i) >= '0' && line.charAt(i) <= '9'; i++) {
+						height = height * 10 + line.charAt(i) - '0';
+					}
+					if(i < line.length() && line.charAt(i) == ' ' && width > 0 && height > 0) return width;
+				}
+			}
+		}
+		return 0;
+	}
+	
+	private int parseHeight(String line) {
+		for(int i = 0; i < line.length(); i++) {
+			if(line.charAt(i) == ' ') {
+				int width = 0;
+				for(i++; i < line.length() && line.charAt(i) >= '0' && line.charAt(i) <= '9'; i++) {
+					width = width * 10 + line.charAt(i) - '0';
+				}
+				if(i < line.length() && line.charAt(i) == 'x') {
+					int height = 0;
+					for(i++; i < line.length() && line.charAt(i) >= '0' && line.charAt(i) <= '9'; i++) {
+						height = height * 10 + line.charAt(i) - '0';
+					}
+					if(i < line.length() && line.charAt(i) == ' ' && width > 0 && height > 0) return height;
+				}
+			}
+		}
 		return 0;
 	}
 }

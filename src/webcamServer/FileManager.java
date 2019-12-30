@@ -383,6 +383,8 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 					raf.writeBytes("\t{\"name\":\"" + file.getName() +
 							"\",\"duration\":" + String.format("%.5f", fileInfo.getDurationSeconds()) +
 							",\"fps\":" + String.format("%.5f", fileInfo.getFps()) + 
+							",\"width\":" + fileInfo.getWidth() +
+							",\"height\":" + fileInfo.getHeight() +
 							"}\r\n]}");
 				} catch (Exception e) {
 					WebcamServer.logger.printLogException(e);

@@ -45,7 +45,7 @@ public class FFmpegProcess {
 						byte[] jpegBuffer = new byte[JPEG_BUFFER_SIZE];
 						int jpegBufferCount = 0;
 						
-						for(int i = readByteStream(inputStream), iPrev = -1; i != -1; iPrev = i, i = readByteStream(inputStream)) {
+						for(int i = Utils.readByteStream(inputStream), iPrev = -1; i != -1; iPrev = i, i = Utils.readByteStream(inputStream)) {
 							if(jpegBufferCount >= jpegBuffer.length) {
 								WebcamServer.logger.printLogLn(false, "FFmpeg jpeg buffer overflow");
 								jpegBufferCount = 0;
@@ -95,7 +95,7 @@ public class FFmpegProcess {
 						byte[] logBuffer = new byte[LOG_BUFFER_SIZE];
 						int logBufferCount = 0;
 						
-						for(int i = readByteStream(errorStream); i != -1; i = readByteStream(errorStream)) {
+						for(int i = Utils.readByteStream(errorStream); i != -1; i = Utils.readByteStream(errorStream)) {
 							if(logBufferCount >= logBuffer.length) {
 								WebcamServer.logger.printLogLn(false, "FFmpeg log buffer overflow");
 								logBufferCount = 0;
@@ -191,17 +191,5 @@ public class FFmpegProcess {
 
 			}
 		}
-	}
-	
-	private int readByteStream(InputStream is) {
-		try {
-			return is.read();
-		} catch (IOException e) {
-			
-		} catch (Exception e) {
-			WebcamServer.logger.printLogException(e);
-		}
-		
-		return -1;
 	}
 }

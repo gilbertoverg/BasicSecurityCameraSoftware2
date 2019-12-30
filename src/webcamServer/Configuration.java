@@ -1,7 +1,6 @@
 package webcamServer;
 
 import java.io.*;
-import java.nio.file.*;
 import java.util.*;
 
 public class Configuration {
@@ -13,7 +12,7 @@ public class Configuration {
 	private final List<String> inputArguments;
 
 	public Configuration(File configFile) {
-		String config = readFile(configFile);
+		String config = Utils.readFile(configFile);
 		if(config == null) throw new IllegalArgumentException("Error reading: " + configFile.getName());
 		
 		name = getValue("Name", config);
@@ -310,17 +309,5 @@ public class Configuration {
 		}
 		
 		return value;
-	}
-	
-	private String readFile(File file) {
-		try {
-			Path path = file.toPath();
-			byte[] content = Files.readAllBytes(path);
-			return new String(content);
-		} catch (Exception e) {
-			
-		}
-		
-		return null;
 	}
 }
