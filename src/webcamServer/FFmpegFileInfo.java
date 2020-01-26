@@ -104,7 +104,7 @@ public class FFmpegFileInfo {
 					for(i++; i < line.length() && line.charAt(i) >= '0' && line.charAt(i) <= '9'; i++) {
 						height = height * 10 + line.charAt(i) - '0';
 					}
-					if(i < line.length() && line.charAt(i) == ' ' && width > 0 && height > 0) return width;
+					if(i < line.length() && (line.charAt(i) < '0' || line.charAt(i) > '9') && width > 0 && height > 0) return width;
 				}
 			}
 		}
@@ -123,7 +123,7 @@ public class FFmpegFileInfo {
 					for(i++; i < line.length() && line.charAt(i) >= '0' && line.charAt(i) <= '9'; i++) {
 						height = height * 10 + line.charAt(i) - '0';
 					}
-					if(i < line.length() && line.charAt(i) == ' ' && width > 0 && height > 0) return height;
+					if(i < line.length() && (line.charAt(i) < '0' || line.charAt(i) > '9') && width > 0 && height > 0) return height;
 				}
 			}
 		}
