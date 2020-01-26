@@ -2,7 +2,6 @@ package webcamServer;
 
 import java.io.*;
 import java.nio.file.*;
-import java.nio.file.attribute.*;
 import java.time.*;
 import java.time.format.*;
 import java.time.temporal.*;
@@ -35,7 +34,8 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 
 	public FileManager(File ffmpeg, File storageFolder, int maxFolders, int timelineQuality, boolean enableJpeg) {
 		this.ffmpegFileInfo = new FFmpegFileInfo(ffmpeg);
-		this.ffmpegFrameGrabber = new FFmpegFrameGrabber(ffmpeg, timelineQuality);
+		if(storageFolder != null) this.ffmpegFrameGrabber = new FFmpegFrameGrabber(ffmpeg, timelineQuality);
+		else this.ffmpegFrameGrabber = null;
 		this.storageFolder = storageFolder;
 		this.maxFolders = maxFolders;
 		this.enableJpeg = enableJpeg;
@@ -248,12 +248,6 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 							return;
 						}
 						
-						BasicFileAttributes attr = Files.readAttributes(tmpFile.toPath(), BasicFileAttributes.class);
-						long size = attr.size();
-						if(!finalize && size <= 4096) {
-							WebcamServer.logger.printLogLn(true, "File " + tmpFile.getName() + " is small, size: " + size);
-							return;
-						}
 						tmpFileForceFirst = null;
 						
 						File newFolder = new File(storageFolder, tmpFile.getName().substring(4, 14));

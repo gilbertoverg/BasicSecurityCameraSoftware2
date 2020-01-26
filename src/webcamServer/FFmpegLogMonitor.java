@@ -57,6 +57,7 @@ public class FFmpegLogMonitor {
 				int ind = line.lastIndexOf("TMP_");
 				if(ind > 0) {
 					currentFile = line.substring(ind, line.indexOf(".mp4", ind) + 4);
+					WebcamServer.logger.printLogLn(true, "Now writing: " + currentFile);
 					if(newTmpFileListener != null) newTmpFileListener.newTmpFile(currentFile);
 				}
 			}
