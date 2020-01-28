@@ -7,6 +7,7 @@ public class Configuration {
 	private final String name, username, password;
 	private final File ffmpeg, fileFolder;
 	private final WebcamServer.Encoder fileEncoder;
+	private final WebcamServer.Decoder fileDecoder;
 	private final Integer fileQuality, fileWidth, fileHeight, fileFrameRate, fileSegmentDuration, maxFolders, timelineQuality, jpegQuality, jpegWidth, jpegHeight, jpegFrameRate, httpPort;
 	private final Boolean debug, streamEnable, logConnections;
 	private final List<String> inputArguments;
@@ -21,6 +22,7 @@ public class Configuration {
 		debug = stringToBool(getValue("Debug", config));
 		fileFolder = stringToFile(getValue("Storage folder", config));
 		fileEncoder = stringToEncoder(getValue("Storage video encoder", config));
+		fileDecoder = stringToDecoder(getValue("Storage video decoder", config));
 		fileQuality = stringToInt(getValue("Storage video quality", config));
 		fileWidth = stringToInt(getValue("Storage video width", config));
 		fileHeight = stringToInt(getValue("Storage video height", config));
@@ -72,6 +74,7 @@ public class Configuration {
 		conf += "Storage folder: " + (fileFolder == null ? "none" : fileFolder.getAbsolutePath()) + "\r\n";
 		if(fileFolder != null) {
 			conf += "Storage video encoder: " + fileEncoder.name() + "\r\n";
+			conf += "Storage video decoder: " + (fileDecoder == null ? "null" : fileDecoder.name()) + "\r\n";
 			if(fileEncoder != WebcamServer.Encoder.COPY) conf += "Storage video quality: " + fileQuality.intValue() + "\r\n";
 			conf += "Storage video width: " + fileWidth.intValue() + "\r\n";
 			conf += "Storage video height: " + fileHeight.intValue() + "\r\n";
@@ -116,6 +119,10 @@ public class Configuration {
 
 	public WebcamServer.Encoder getFileEncoder() {
 		return fileEncoder;
+	}
+	
+	public WebcamServer.Decoder getFileDecoder() {
+		return fileDecoder;
 	}
 
 	public int getFileQuality() {
@@ -221,6 +228,13 @@ public class Configuration {
 		if(s.equalsIgnoreCase("h265")) return WebcamServer.Encoder.H265;
 		if(s.equalsIgnoreCase("h265_qsv")) return WebcamServer.Encoder.H265_QSV;
 		if(s.equalsIgnoreCase("copy")) return WebcamServer.Encoder.COPY;
+		return null;
+	}
+	
+	private WebcamServer.Decoder stringToDecoder(String s) {
+		if(s == null) return null;
+		if(s.equalsIgnoreCase("h264_qsv")) return WebcamServer.Decoder.H264_QSV;
+		if(s.equalsIgnoreCase("h265_qsv")) return WebcamServer.Decoder.H265_QSV;
 		return null;
 	}
 	

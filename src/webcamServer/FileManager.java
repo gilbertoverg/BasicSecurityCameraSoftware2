@@ -32,9 +32,9 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 	
 	private volatile NewFileListener newFileListener = null;
 
-	public FileManager(File ffmpeg, File storageFolder, int maxFolders, int timelineQuality, boolean enableJpeg) {
+	public FileManager(File ffmpeg, File storageFolder, WebcamServer.Decoder fileDecoder, int maxFolders, int timelineQuality, boolean enableJpeg) {
 		this.ffmpegFileInfo = new FFmpegFileInfo(ffmpeg);
-		if(storageFolder != null) this.ffmpegFrameGrabber = new FFmpegFrameGrabber(ffmpeg, timelineQuality);
+		if(storageFolder != null) this.ffmpegFrameGrabber = new FFmpegFrameGrabber(ffmpeg, fileDecoder, timelineQuality);
 		else this.ffmpegFrameGrabber = null;
 		this.storageFolder = storageFolder;
 		this.maxFolders = maxFolders;

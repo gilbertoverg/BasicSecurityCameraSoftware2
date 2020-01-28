@@ -5,6 +5,7 @@ import java.util.*;
 
 public class WebcamServer {
 	public static enum Encoder { MPEG4, H264, H264_QSV, H265, H265_QSV, COPY };
+	public static enum Decoder { H264_QSV, H265_QSV };
 	public static String VERSION = "2.4.3";
 	public static Logger logger = new Logger();
 	
@@ -41,7 +42,9 @@ public class WebcamServer {
 				logger.setDebug(configuration.getDebug());
 				
 				logger.printLogLn(false, "Initializing file manager");
-				fileManager = new FileManager(configuration.getFFmpeg(), configuration.getFileFolder(), configuration.getMaxFolders(), configuration.getTimelineQuality(), configuration.getStreamEnable());
+				fileManager = new FileManager(configuration.getFFmpeg(),
+						configuration.getFileFolder(), configuration.getFileDecoder(), configuration.getMaxFolders(), configuration.getTimelineQuality(),
+						configuration.getStreamEnable());
 				
 				logger.printLogLn(false, "Initializing webcam");
 				ffmpegWebcamReader = new FFmpegWebcamReader(configuration.getFFmpeg(), configuration.getInputArguments(),
