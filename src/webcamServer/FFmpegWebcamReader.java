@@ -45,7 +45,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 			if(fileSegmentDuration < 5 || fileSegmentDuration > 3600) throw new IllegalArgumentException("File segment duration out of range");
 		}
 		if(jpegStream) {
-			if(jpegQuality < 2 || jpegQuality > 31) throw new IllegalArgumentException("Jpeg quality out of range");
+			if(jpegQuality != 0 && (jpegQuality < 2 || jpegQuality > 31)) throw new IllegalArgumentException("Jpeg quality out of range");
 			if(jpegWidth < 64 || jpegWidth > 10000) throw new IllegalArgumentException("Jpeg width out of range");
 			if(jpegHeight < 64 || jpegHeight > 10000) throw new IllegalArgumentException("Jpeg height out of range");
 			if(jpegFrameRate < 1 || jpegFrameRate > 60) throw new IllegalArgumentException("Jpeg frame rate out of range");
@@ -175,17 +175,23 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 		}
 		
 		if(jpegStream) {
-			cmdList.add("-c:v");
-			cmdList.add("mjpeg");
-			
-			cmdList.add("-qscale:v");
-			cmdList.add(Integer.toString(jpegQuality));
-			
-			cmdList.add("-s");
-			cmdList.add(jpegWidth + "x" + jpegHeight);
-			
-			cmdList.add("-r");
-			cmdList.add(Integer.toString(jpegFrameRate));
+			if(jpegQuality == 0) {
+				cmdList.add("-c:v");
+				cmdList.add("copy");
+			}
+			else {
+				cmdList.add("-c:v");
+				cmdList.add("mjpeg");
+				
+				cmdList.add("-qscale:v");
+				cmdList.add(Integer.toString(jpegQuality));
+				
+				cmdList.add("-s");
+				cmdList.add(jpegWidth + "x" + jpegHeight);
+				
+				cmdList.add("-r");
+				cmdList.add(Integer.toString(jpegFrameRate));
+			}
 			
 			cmdList.add("-f");
 			cmdList.add("mjpeg");
