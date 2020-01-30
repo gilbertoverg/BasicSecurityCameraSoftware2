@@ -267,10 +267,10 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 						WebcamServer.logger.printLogLn(true, "Moving file: " + newFile.getName());
 						Files.move(tmpFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 						
-						updateFileList(newFile, newFolder);
-						
-						NewFileListener nfl = newFileListener;
-						if(nfl != null) nfl.newFile(newFile);
+						if(updateFileList(newFile, newFolder, true)) {
+							NewFileListener nfl = newFileListener;
+							if(nfl != null) nfl.newFile(newFile);
+						}
 					}
 				}
 			}
@@ -320,7 +320,7 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 					
 					List<File> files = listFiles(folder, FILE_PATTERN);
 					if(files != null) {
-						for(File file : files) updateFileList(file, folder);
+						for(File file : files) updateFileList(file, folder, false);
 					}
 				}
 			}
@@ -331,11 +331,17 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 		}
 	}
 	
-	private void updateFileList(File file, File folder) {
+	private boolean updateFileList(File file, File folder, boolean deleteIfEmpty) {
+		boolean retVal = false;
 		try {
 			FileInfo fileInfo = ffmpegFileInfo.getFileInfo(file);
 			if(fileInfo == null) WebcamServer.logger.printLogLn(false, "Unable to get video info for " + file.getName());
+			else if(fileInfo.isEmpty()) {
+				WebcamServer.logger.printLogLn(false, "Video " + file.getName() + " is empty, discarding it");
+				if(deleteIfEmpty) file.delete();
+			}
 			else {
+				retVal = true;
 				WebcamServer.logger.printLogLn(true, "Video info for " + file.getName() + ": " + fileInfo.toString());
 				
 				File fileList = new File(folder, FILE_LIST_NAME);
@@ -389,6 +395,8 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}
+		
+		return retVal;
 	}
  	
 	private void deleteFolderAndContent(File file) {

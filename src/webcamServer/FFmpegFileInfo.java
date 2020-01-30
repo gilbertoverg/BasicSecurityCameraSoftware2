@@ -26,8 +26,11 @@ public class FFmpegFileInfo {
 
 						line = line.trim();
 						if(line.startsWith("Duration:")) {
-							double durationSeconds = parseDurationSeconds(line.substring(9));
-							fileInfo.setDurationSeconds(durationSeconds);
+							Double durationSeconds = parseDurationSeconds(line.substring(9));
+							if(durationSeconds != null && durationSeconds.doubleValue() > 0.001) {
+								fileInfo.setDurationSeconds(durationSeconds.doubleValue());
+								fileInfo.setEmpty(false);
+							}
 						}
 						if(line.startsWith("Stream") && line.contains("Video:")) {
 							double fps = parseFps(line);
@@ -47,7 +50,7 @@ public class FFmpegFileInfo {
 			
 			reader.close();
 			
-			if(fileInfo.getDurationSeconds() > 0 && fileInfo.getFps() > 0 && fileInfo.getWidth() > 0 && fileInfo.getHeight() > 0) return fileInfo;
+			if(fileInfo.isEmpty() || (fileInfo.getDurationSeconds() > 0 && fileInfo.getFps() > 0 && fileInfo.getWidth() > 0 && fileInfo.getHeight() > 0)) return fileInfo;
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}
@@ -55,28 +58,24 @@ public class FFmpegFileInfo {
 		return null;
 	}
 	
-	private double parseDurationSeconds(String line) {
+	private Double parseDurationSeconds(String line) {
 		int ind = line.indexOf(':');
 		if(ind > 0) {
 			double hours = Double.parseDouble(line.substring(0, ind));
 			line = line.substring(ind + 1);
-			
 			ind = line.indexOf(':');
 			if(ind > 0) {
 				double minutes = Double.parseDouble(line.substring(0, ind));
 				line = line.substring(ind + 1);
-				
 				ind = 0;
 				while(ind < line.length() && ((line.charAt(ind) >= '0' && line.charAt(ind) <= '9') || line.charAt(ind) == '.')) ind++;
 				if(ind > 0) {
 					double seconds = Double.parseDouble(line.substring(0, ind));
-					
-					return hours * 3600.0 + minutes * 60.0 + seconds;
+					return Double.valueOf(hours * 3600.0 + minutes * 60.0 + seconds);
 				}
 			}
 		}
-		
-		return 0;
+		return null;
 	}
 	
 	private double parseFps(String line) {
@@ -85,10 +84,8 @@ public class FFmpegFileInfo {
 		if(end >= 0) {
 			int start = end;
 			while(start >= 0 && ((line.charAt(start) >= '0' && line.charAt(start) <= '9') || line.charAt(start) == '.')) start--;
-			
 			if(start < end) return Double.parseDouble(line.substring(start + 1, end + 1));
 		}
-		
 		return 0;
 	}
 	
