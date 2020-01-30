@@ -16,7 +16,8 @@ public class FFmpegFileInfo {
 			Process process = Runtime.getRuntime().exec(cmdArray);
 			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
-			FileInfo fileInfo = new FileInfo();
+			Double durationSeconds = null, fps = null;
+			Integer width = null, height = null;
 
 			try {
 				String line = null;
@@ -25,20 +26,11 @@ public class FFmpegFileInfo {
 						WebcamServer.logger.printLogLn(true, "FFmpeg file info: " + line);
 
 						line = line.trim();
-						if(line.startsWith("Duration:")) {
-							Double durationSeconds = parseDurationSeconds(line.substring(9));
-							if(durationSeconds != null && durationSeconds.doubleValue() > 0.001) {
-								fileInfo.setDurationSeconds(durationSeconds.doubleValue());
-								fileInfo.setEmpty(false);
-							}
-						}
+						if(line.startsWith("Duration:")) durationSeconds = parseDurationSeconds(line.substring(9));
 						if(line.startsWith("Stream") && line.contains("Video:")) {
-							double fps = parseFps(line);
-							fileInfo.setFps(fps);
-							int width = parseWidth(line);
-							fileInfo.setWidth(width);
-							int height = parseHeight(line);
-							fileInfo.setHeight(height);
+							fps = parseFps(line);
+							width = parseWidth(line);
+							height = parseHeight(line);
 						}
 					} catch (Exception e) {
 						WebcamServer.logger.printLogException(e);
@@ -50,7 +42,9 @@ public class FFmpegFileInfo {
 			
 			reader.close();
 			
-			if(fileInfo.isEmpty() || (fileInfo.getDurationSeconds() > 0 && fileInfo.getFps() > 0 && fileInfo.getWidth() > 0 && fileInfo.getHeight() > 0)) return fileInfo;
+			if(durationSeconds != null && fps != null && width != null && height != null && fps.doubleValue() > 0 && width.intValue() > 0 && height.intValue() > 0) {
+				return new FileInfo(durationSeconds.doubleValue(), fps.doubleValue(), width.intValue(), height.intValue(), durationSeconds.doubleValue() < 0.001);
+			}
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}
@@ -78,18 +72,18 @@ public class FFmpegFileInfo {
 		return null;
 	}
 	
-	private double parseFps(String line) {
+	private Double parseFps(String line) {
 		int end = line.indexOf("fps") - 1;
 		while(end >= 0 && Character.isWhitespace(line.charAt(end))) end--;
 		if(end >= 0) {
 			int start = end;
 			while(start >= 0 && ((line.charAt(start) >= '0' && line.charAt(start) <= '9') || line.charAt(start) == '.')) start--;
-			if(start < end) return Double.parseDouble(line.substring(start + 1, end + 1));
+			if(start < end) return Double.valueOf(Double.parseDouble(line.substring(start + 1, end + 1)));
 		}
-		return 0;
+		return null;
 	}
 	
-	private int parseWidth(String line) {
+	private Integer parseWidth(String line) {
 		for(int i = 0; i < line.length(); i++) {
 			if(line.charAt(i) == ' ') {
 				int width = 0;
@@ -101,14 +95,14 @@ public class FFmpegFileInfo {
 					for(i++; i < line.length() && line.charAt(i) >= '0' && line.charAt(i) <= '9'; i++) {
 						height = height * 10 + line.charAt(i) - '0';
 					}
-					if(i < line.length() && (line.charAt(i) < '0' || line.charAt(i) > '9') && width > 0 && height > 0) return width;
+					if(i < line.length() && (line.charAt(i) < '0' || line.charAt(i) > '9') && width > 0 && height > 0) return Integer.valueOf(width);
 				}
 			}
 		}
-		return 0;
+		return null;
 	}
 	
-	private int parseHeight(String line) {
+	private Integer parseHeight(String line) {
 		for(int i = 0; i < line.length(); i++) {
 			if(line.charAt(i) == ' ') {
 				int width = 0;
@@ -120,10 +114,10 @@ public class FFmpegFileInfo {
 					for(i++; i < line.length() && line.charAt(i) >= '0' && line.charAt(i) <= '9'; i++) {
 						height = height * 10 + line.charAt(i) - '0';
 					}
-					if(i < line.length() && (line.charAt(i) < '0' || line.charAt(i) > '9') && width > 0 && height > 0) return height;
+					if(i < line.length() && (line.charAt(i) < '0' || line.charAt(i) > '9') && width > 0 && height > 0) return Integer.valueOf(height);
 				}
 			}
 		}
-		return 0;
+		return null;
 	}
 }
