@@ -42,6 +42,13 @@ public class FFmpegFileInfo {
 			
 			reader.close();
 			
+			if(durationSeconds != null && durationSeconds.doubleValue() < 0.001) {
+				return new FileInfo(durationSeconds.doubleValue(),
+						fps != null ? fps.doubleValue() : 0.0,
+						width != null ? width.intValue() : 0,
+						height != null ? height.intValue() : 0,
+						true);
+			}
 			if(durationSeconds != null && fps != null && width != null && height != null && fps.doubleValue() > 0 && width.intValue() > 0 && height.intValue() > 0) {
 				return new FileInfo(durationSeconds.doubleValue(), fps.doubleValue(), width.intValue(), height.intValue(), durationSeconds.doubleValue() < 0.001);
 			}
