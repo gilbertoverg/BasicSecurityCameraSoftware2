@@ -70,6 +70,7 @@
         .menuDiv a:hover,
         .menuDiv svg:hover {
             background-color: #101010;
+            cursor: pointer;
         }
 
         .controlDiv {
@@ -179,14 +180,21 @@
         }
 
         .contentDiv canvas {
-            visibility: hidden;
-            display: block;
+            display: none;
             margin: auto;
             border-style: solid;
             border-width: 2px;
             border-color: #000000;
             width: 100%;
             height: 100%;
+        }
+        
+        .contentDiv p {
+            visibility: hidden;
+            display: block;
+            margin: auto;
+            font-size: 80px;
+            text-align: center;
         }
 
         @media (hover: hover) {
@@ -261,6 +269,7 @@
     </div>
     <div id="contentDiv" class="contentDiv">
         <canvas id="canvas">Your browser does not support the canvas tag</canvas>
+        <p id="canvasAlt">Loading</p>
     </div>
 
     <script>
@@ -282,25 +291,25 @@
             document.getElementById("canvas").style.height = Math.floor(ratio * height) + "px";
         };
 
-        function drawTextCanvas(text, color) {
-            var ctx = document.getElementById("canvas").getContext("2d");
-            ctx.fillStyle = "#808080";
-            ctx.fillRect(0, 0, width, height);
-            if (text && text.length > 0) {
-                ctx.font = "100px Arial";
-                ctx.font = Math.min(Math.floor(width / ctx.measureText(text).width * 90), 35) + "px Arial";
-                ctx.fillStyle = color;
-                ctx.textAlign = "center";
-                ctx.fillText(text, width / 2, height / 2);
-            }
+        function showText(text, color) {
+            document.getElementById("canvas").style.display = "none";
+            document.getElementById("canvasAlt").innerHTML = text;
+            document.getElementById("canvasAlt").style.color = color;
+            document.getElementById("canvasAlt").style.display = "block";
         };
 
         img.onload = function() {
             imgWaiting = false;
             if (imgEnable) {
-                var ctx = document.getElementById("canvas").getContext("2d");
-                ctx.drawImage(img, 0, 0, width, height);
-                document.getElementById("tooltip").innerHTML = prevFileLoaded + " @ " + prevTimeLoaded.toFixed(3) + "s";
+                document.getElementById("canvasAlt").style.display = "none";
+                document.getElementById("canvas").getContext("2d").drawImage(img, 0, 0, width, height);
+                document.getElementById("canvas").style.display = "block";
+                if(prevFileLoaded !== null && prevTimeLoaded !== null) {
+                    document.getElementById("tooltip").innerHTML = prevFileLoaded + " @ " + prevTimeLoaded.toFixed(3) + "s";
+                }
+                else {
+                    document.getElementById("tooltip").innerHTML = "Error";
+                }
             }
             loadFrame();
         };
@@ -308,20 +317,26 @@
         img.onerror = function() {
             imgWaiting = false;
             if (imgEnable) {
-                drawTextCanvas("OFFLINE", "#FF0000");
-                document.getElementById("tooltip").innerHTML = prevFileLoaded + " @ " + prevTimeLoaded.toFixed(3) + "s";
+                showText("OFFLINE", "#FF0000");
+                if(prevFileLoaded !== null && prevTimeLoaded !== null) {
+                    document.getElementById("tooltip").innerHTML = prevFileLoaded + " @ " + prevTimeLoaded.toFixed(3) + "s";
+                }
+                else {
+                    document.getElementById("tooltip").innerHTML = "Error";
+                }
             }
             loadFrame();
         };
 
         function loadFolders() {
             folderRequest.abort();
+            fileRequest.abort();
 
-            document.getElementById("canvas").style.visibility = "hidden";
             imgEnable = false;
             prevFileLoaded = null;
             prevTimeLoaded = null;
-            drawTextCanvas("Loading", "#000000");
+            document.getElementById("canvasAlt").style.visibility = "hidden";
+            showText("Loading", "#000000");
 
             document.getElementById("range").style.visibility = "hidden";
             document.getElementById("range").disabled = true;
@@ -369,11 +384,11 @@
         function loadFiles() {
             fileRequest.abort();
 
-            document.getElementById("canvas").style.visibility = "hidden";
             imgEnable = false;
             prevFileLoaded = null;
             prevTimeLoaded = null;
-            drawTextCanvas("Loading", "#000000");
+            document.getElementById("canvasAlt").style.visibility = "hidden";
+            showText("Loading", "#000000");
 
             document.getElementById("range").style.visibility = "hidden";
             document.getElementById("range").disabled = true;
@@ -414,7 +429,7 @@
                             totalDuration = 0;
                         }
 
-                        document.getElementById("canvas").style.visibility = "visible";
+                        document.getElementById("canvasAlt").style.visibility = "visible";
 
                         document.getElementById("range").max = Math.floor(totalDuration).toFixed(0);
                         document.getElementById("range").style.visibility = "visible";
@@ -515,13 +530,13 @@
                     document.getElementById("title").innerHTML = title;
 
                     width = json.historyWidth || 64;
-                    if (isNaN(width)) width = 64;
+                    if (!isFinite(width)) width = 64;
                     if (width < 64) width = 64;
                     if (width > 10000) width = 10000;
                     document.getElementById("canvas").width = width;
 
                     height = json.historyHeight || 64;
-                    if (isNaN(height)) height = 64;
+                    if (!isFinite(height)) height = 64;
                     if (height < 64) height = 64;
                     if (height > 10000) height = 10000;
                     document.getElementById("canvas").height = height;

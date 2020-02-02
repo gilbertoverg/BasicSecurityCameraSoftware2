@@ -70,6 +70,7 @@
         .menuDiv a:hover,
         .menuDiv svg:hover {
             background-color: #101010;
+            cursor: pointer;
         }
 
         .controlDiv {
@@ -209,6 +210,7 @@
 
         function loadFolders() {
             folderRequest.abort();
+            fileRequest.abort();
 
             var video = document.getElementById("video");
             video.pause();
@@ -356,12 +358,12 @@
                     document.getElementById("title").innerHTML = title;
 
                     width = json.historyWidth || 64;
-                    if (isNaN(width)) width = 64;
+                    if (!isFinite(width)) width = 64;
                     if (width < 64) width = 64;
                     if (width > 10000) width = 10000;
 
                     height = json.historyHeight || 64;
-                    if (isNaN(height)) height = 64;
+                    if (!isFinite(height)) height = 64;
                     if (height < 64) height = 64;
                     if (height > 10000) height = 10000;
 
