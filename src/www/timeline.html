@@ -125,6 +125,7 @@
             -webkit-appearance: none;
             background: #909090;
             outline: none;
+            border-radius: 0;
             cursor: pointer;
             width: 100%;
             height: 40px;
@@ -233,6 +234,13 @@
             }
             .contentDiv {
                 height: calc(100% - 150px);
+            }
+        }
+
+        @supports (-webkit-overflow-scrolling: touch) {
+            .rangeDiv {
+                left: 15px;
+                width: calc(100% - 30px);
             }
         }
     </style>
