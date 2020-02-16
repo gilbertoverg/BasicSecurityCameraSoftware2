@@ -155,6 +155,21 @@ public class FileManager implements JpegListener, NewTmpFileListener, MotionDete
 		return null;
 	}
 	
+	public String getFileMotionList(String folderName) {
+		try {
+			if(storageFolder == null) return null;
+			if(!matchString(folderName, FOLDER_PATTERN)) return null;
+			File folder = new File(storageFolder, folderName);
+			File file = new File(folder, FILE_MOTION_LIST_NAME);
+			if(!file.exists()) return null;
+			return new String(Files.readAllBytes(file.toPath()));
+		} catch (Exception e) {
+			WebcamServer.logger.printLogException(e);
+		}
+		
+		return null;
+	}
+	
 	public File getFileInFolder(String fileName, String folderName) {
 		try {
 			if(storageFolder == null) return null;
