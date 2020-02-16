@@ -4,7 +4,7 @@ import java.io.*;
 import java.util.*;
 import listeners.*;
 
-public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFileListener {
+public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFileListener, MotionDetectionListener {
 	private final FFmpegLogMonitor ffmpegLogMonitor;
 	private final FFmpegProcess ffmpegProcess;
 	
@@ -14,8 +14,9 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 	private volatile List<JpegListener> jpegListeners = new ArrayList<>();
 	private volatile List<StatListener> statListeners = new ArrayList<>();
 	private volatile List<NewTmpFileListener> newTmpFileListeners = new ArrayList<>();
+	private volatile List<MotionDetectionListener> motionDetectionListeners = new ArrayList<>();
 
-	public FFmpegWebcamReader(File ffmpeg, List<String> inputArguments,
+	public FFmpegWebcamReader(File ffmpeg, List<String> inputArguments, boolean motionDetection,
 								File fileFolder, WebcamServer.Encoder encoder, int fileQuality, int fileWidth, int fileHeight, int fileFrameRate, int fileSegmentDuration,
 								boolean jpegStream, int jpegQuality, int jpegWidth, int jpegHeight, int jpegFrameRate) {
 		if(ffmpeg == null || !ffmpeg.exists()) throw new IllegalArgumentException("FFmpeg executable not found");
@@ -199,6 +200,16 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 			cmdList.add("pipe:1");
 		}
 		
+		if(motionDetection) {
+			cmdList.add("-vf");
+			cmdList.add("select='gte(t\\,selected_n)',select='gte(scene\\,0)',metadata=print");
+			
+			cmdList.add("-f");
+			cmdList.add("null");
+			
+			cmdList.add("-");
+		}
+		
 		String[] cmdArray = new String[cmdList.size()];
 		cmdArray = cmdList.toArray(cmdArray);
 		
@@ -206,6 +217,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 		
 		ffmpegLogMonitor = new FFmpegLogMonitor(30000, 0.75, 15);
 		ffmpegLogMonitor.setNewTmpFileListener(this);
+		ffmpegLogMonitor.setMotionDetectionListener(this);
 		
 		ffmpegProcess = new FFmpegProcess(cmdArray);
 		ffmpegProcess.setJpegListener(this);
@@ -222,6 +234,10 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 	
 	public synchronized void addNewTmpFileListener(NewTmpFileListener newTmpFileListener) {
 		if(newTmpFileListener != null) newTmpFileListeners.add(newTmpFileListener);
+	}
+	
+	public synchronized void addMotionDetectionListener(MotionDetectionListener motionDetectionListener) {
+		if(motionDetectionListener != null) motionDetectionListeners.add(motionDetectionListener);
 	}
 	
 	public synchronized void restartFFmpeg() {
@@ -249,6 +265,7 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 							WebcamServer.logger.printLogLn(false, "Opening webcam");
 							ffmpegLogMonitor.reset();
 							for(StatListener sl : statListeners) sl.resetStats();
+							for(MotionDetectionListener mdl : motionDetectionListeners) mdl.resetMotion();
 							restartFFmpeg = false;
 							enableFFmpegLog = true;
 							ffmpegProcess.start();
@@ -353,5 +370,15 @@ public class FFmpegWebcamReader implements JpegListener, LogListener, NewTmpFile
 	@Override
 	public void newTmpFile(String file) {
 		for(NewTmpFileListener ntfl : newTmpFileListeners) ntfl.newTmpFile(file);
+	}
+	
+	@Override
+	public void newMotionLevel(double motion) {
+		for(MotionDetectionListener mdl : motionDetectionListeners) mdl.newMotionLevel(motion);
+	}
+
+	@Override
+	public void resetMotion() {
+		for(MotionDetectionListener mdl : motionDetectionListeners) mdl.resetMotion();
 	}
 }

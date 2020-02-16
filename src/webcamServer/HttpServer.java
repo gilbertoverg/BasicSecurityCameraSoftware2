@@ -93,6 +93,10 @@ public class HttpServer extends NanoHTTPD {
 				ByteArrayInputStream bais = new ByteArrayInputStream(jpeg);
 				return disableCache(Response.newFixedLengthResponse(Status.OK, "image/jpeg", bais, bais.available()));
 			}
+			else if(session.getUri().equals("/data/motionLevel")) {
+				String s = String.format("%.6f", fileManager.getCurrentMotionLevel());
+				return disableCache(Response.newFixedLengthResponse(Status.OK, NanoHTTPD.MIME_PLAINTEXT, s));
+			}
 			else if(session.getUri().equals("/data/folderList")) {
 				String[] folders = fileManager.getFolders();
 				if(folders == null) return Response.newFixedLengthResponse(Status.SERVICE_UNAVAILABLE, NanoHTTPD.MIME_PLAINTEXT, "SERVICE UNAVAILABLE");

@@ -11,6 +11,7 @@ public class FFmpegLogMonitor {
 	private volatile String currentFile = null;
 	
 	private volatile NewTmpFileListener newTmpFileListener = null;
+	private volatile MotionDetectionListener motionDetectionListener = null;
 
 	public FFmpegLogMonitor(long timeoutMilliseconds, double dupThreshold, long dupCounterThreshold) {
 		this.timeout = timeoutMilliseconds * 1000000L;
@@ -22,6 +23,10 @@ public class FFmpegLogMonitor {
 	
 	public synchronized void setNewTmpFileListener(NewTmpFileListener newTmpFileListener) {
 		this.newTmpFileListener = newTmpFileListener;
+	}
+	
+	public synchronized void setMotionDetectionListener(MotionDetectionListener motionDetectionListener) {
+		this.motionDetectionListener = motionDetectionListener;
 	}
 	
 	public synchronized void reset() {
@@ -61,6 +66,13 @@ public class FFmpegLogMonitor {
 					if(newTmpFileListener != null) newTmpFileListener.newTmpFile(currentFile);
 				}
 			}
+			
+			int motionDetectionIndex = line.indexOf("scene_score=");
+			if(motionDetectionIndex >= 0) {
+				double motion = readNumberReal(line, motionDetectionIndex + 12);
+				WebcamServer.logger.printLogLn(true, "Current motion level: " + motion);
+				if(motionDetectionListener != null) motionDetectionListener.newMotionLevel(motion);
+			}
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}
@@ -88,6 +100,19 @@ public class FFmpegLogMonitor {
 			int end = begin;
 			while(end < line.length() && line.charAt(end) >= '0' && line.charAt(end) <= '9') end++;
 			return Long.parseLong(line.substring(begin, end));
+		} catch (Exception e) {
+			WebcamServer.logger.printLogException(e);
+		}
+		
+		return 0;
+	}
+	
+	private double readNumberReal(String line, int begin) {
+		try {
+			while(begin < line.length() && (line.charAt(begin) != '.' && (line.charAt(begin) < '0' || line.charAt(begin) > '9'))) begin++;
+			int end = begin;
+			while(end < line.length() && (line.charAt(end) == '.' || (line.charAt(end) >= '0' && line.charAt(end) <= '9'))) end++;
+			return Double.parseDouble(line.substring(begin, end));
 		} catch (Exception e) {
 			WebcamServer.logger.printLogException(e);
 		}

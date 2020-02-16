@@ -6,7 +6,6 @@ import listeners.*;
 public class SystemMonitor implements NewFileListener, JpegListener, StatListener {
 	private final long jpegGenerationPeriod, fileGenerationPeriod;
 	private final FFmpegWebcamReader ffmpegWebcamReader;
-	private final FileManager fileManager;
 	
 	private volatile Thread thread = null;
 	private volatile boolean killThread = false;
@@ -14,12 +13,11 @@ public class SystemMonitor implements NewFileListener, JpegListener, StatListene
 	private volatile long lastTimeJpegGenerated, lastTimeFileGenerated, millisDisableLog, millisDisableJpegCheck, millisDisableFileCheck;
 	private volatile Object statLock = new Object();
 	
-	public SystemMonitor(long jpegGenerationFrequency, long fileGenerationPeriod, FFmpegWebcamReader ffmpegWebcamReader, FileManager fileManager) {
+	public SystemMonitor(long jpegGenerationFrequency, long fileGenerationPeriod, FFmpegWebcamReader ffmpegWebcamReader) {
 		if(jpegGenerationFrequency <= 0) this.jpegGenerationPeriod = 0;
 		else this.jpegGenerationPeriod = 1000000000L / jpegGenerationFrequency;
 		this.fileGenerationPeriod = fileGenerationPeriod * 1000000000L;
 		this.ffmpegWebcamReader = ffmpegWebcamReader;
-		this.fileManager = fileManager;
 	}
 	
 	@Override
@@ -85,7 +83,6 @@ public class SystemMonitor implements NewFileListener, JpegListener, StatListene
 									ffmpegWebcamReader.enableFFmpegLog(false);
 									
 									millisDisableFileCheck += 30000 + fileGenerationPeriod / 1000000L * 2L;
-									fileManager.timeChanged();
 								}
 								else {
 									if(millisDisableLog > 0) {

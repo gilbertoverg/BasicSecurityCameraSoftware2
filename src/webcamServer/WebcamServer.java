@@ -6,7 +6,7 @@ import java.util.*;
 public class WebcamServer {
 	public static enum Encoder { MPEG4, H264, H264_QSV, H265, H265_QSV, COPY };
 	public static enum Decoder { H264_QSV, H265_QSV };
-	public static String VERSION = "2.4.4";
+	public static String VERSION = "2.5.0";
 	public static Logger logger = new Logger();
 	
 	private static Configuration configuration = null;
@@ -44,14 +44,16 @@ public class WebcamServer {
 				logger.printLogLn(false, "Initializing file manager");
 				fileManager = new FileManager(configuration.getFFmpeg(),
 						configuration.getFileFolder(), configuration.getFileDecoder(), configuration.getMaxFolders(), configuration.getTimelineQuality(),
-						configuration.getStreamEnable());
+						configuration.getStreamEnable(),
+						configuration.getMotionDetection());
 				
 				logger.printLogLn(false, "Initializing webcam");
-				ffmpegWebcamReader = new FFmpegWebcamReader(configuration.getFFmpeg(), configuration.getInputArguments(),
+				ffmpegWebcamReader = new FFmpegWebcamReader(configuration.getFFmpeg(), configuration.getInputArguments(), configuration.getMotionDetection(),
 						configuration.getFileFolder(), configuration.getFileEncoder(), configuration.getFileQuality(), configuration.getFileWidth(), configuration.getFileHeight(), configuration.getFileFrameRate(), configuration.getFileSegmentDuration(),
 						configuration.getStreamEnable(), configuration.getJpegQuality(), configuration.getJpegWidth(), configuration.getJpegHeight(), configuration.getJpegFrameRate());
 				ffmpegWebcamReader.addJpegListener(fileManager);
 				ffmpegWebcamReader.addNewTmpFileListener(fileManager);
+				ffmpegWebcamReader.addMotionDetectionListener(fileManager);
 				
 				if(configuration.getHttpPort() > 0) {
 					logger.printLogLn(false, "Initializing web server");
@@ -63,8 +65,7 @@ public class WebcamServer {
 				logger.printLogLn(false, "Initializing system monitor");
 				systemMonitor = new SystemMonitor(configuration.getStreamEnable() ? configuration.getJpegFrameRate() : 0,
 						configuration.getFileFolder() == null ? 0 : configuration.getFileSegmentDuration(),
-						ffmpegWebcamReader,
-						fileManager);
+						ffmpegWebcamReader);
 				fileManager.setNewFileListener(systemMonitor);
 				ffmpegWebcamReader.addJpegListener(systemMonitor);
 				ffmpegWebcamReader.addStatListener(systemMonitor);

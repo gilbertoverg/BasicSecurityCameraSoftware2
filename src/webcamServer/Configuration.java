@@ -9,7 +9,7 @@ public class Configuration {
 	private final WebcamServer.Encoder fileEncoder;
 	private final WebcamServer.Decoder fileDecoder;
 	private final Integer fileQuality, fileWidth, fileHeight, fileFrameRate, fileSegmentDuration, maxFolders, timelineQuality, jpegQuality, jpegWidth, jpegHeight, jpegFrameRate, httpPort;
-	private final Boolean debug, streamEnable, logConnections;
+	private final Boolean debug, streamEnable, logConnections, motionDetection;
 	private final List<String> inputArguments;
 
 	public Configuration(File configFile) {
@@ -19,6 +19,7 @@ public class Configuration {
 		name = getValue("Name", config);
 		ffmpeg = stringToFile(getValue("FFmpeg executable", config));
 		inputArguments = stringTokenize(getValue("FFmpeg input arguments", config));
+		motionDetection = stringToBool(getValue("Enable motion detection", config));
 		debug = stringToBool(getValue("Debug", config));
 		fileFolder = stringToFile(getValue("Storage folder", config));
 		fileEncoder = stringToEncoder(getValue("Storage video encoder", config));
@@ -43,6 +44,7 @@ public class Configuration {
 		if(name == null || name.isEmpty()) throw new IllegalArgumentException("Name is missing from " + configFile.getName());
 		if(ffmpeg == null) throw new IllegalArgumentException("FFmpeg executable is missing from " + configFile.getName());
 		if(inputArguments == null) throw new IllegalArgumentException("FFmpeg input arguments are missing from " + configFile.getName());
+		if(motionDetection == null) throw new IllegalArgumentException("Enable motion detection is missing from " + configFile.getName());
 		if(debug == null) throw new IllegalArgumentException("Debug is missing from " + configFile.getName());
 		if(fileFolder != null) {
 			if(fileEncoder == null) throw new IllegalArgumentException("Storage video encoder is missing from " + configFile.getName());
@@ -70,6 +72,7 @@ public class Configuration {
 		conf += "Name: " + name + "\r\n";
 		conf += "FFmpeg executable: " + ffmpeg.getAbsolutePath() + "\r\n";
 		conf += "FFmpeg input arguments: " + Arrays.toString(inputArguments.toArray()) + "\r\n";
+		conf += "Enable motion detection: " + motionDetection.booleanValue() + "\r\n";
 		conf += "Debug: " + debug.booleanValue() + "\r\n";
 		conf += "Storage folder: " + (fileFolder == null ? "none" : fileFolder.getAbsolutePath()) + "\r\n";
 		if(fileFolder != null) {
@@ -111,6 +114,10 @@ public class Configuration {
 	
 	public List<String> getInputArguments() {
 		return inputArguments;
+	}
+
+	public boolean getMotionDetection() {
+		return motionDetection == null ? false : motionDetection.booleanValue();
 	}
 
 	public File getFileFolder() {

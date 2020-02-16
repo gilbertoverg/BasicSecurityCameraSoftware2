@@ -8,11 +8,11 @@ import java.time.temporal.*;
 import java.util.*;
 import listeners.*;
 
-public class FileManager implements JpegListener, NewTmpFileListener {
-	private final String TMP_FILE_PATTERN = "TMP_????-??-??_??-??-??.mp4";
+public class FileManager implements JpegListener, NewTmpFileListener, MotionDetectionListener {
 	private final String FILE_PATTERN = "????-??-??_??-??-??.mp4";
 	private final String FOLDER_PATTERN = "????-??-??";
 	private final String FILE_LIST_NAME = "FileList.txt";
+	private final String FILE_MOTION_LIST_NAME = "FileMotionList.txt";
 	
 	private final FFmpegFileInfo ffmpegFileInfo;
 	private final FFmpegFrameGrabber ffmpegFrameGrabber;
@@ -20,55 +20,34 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 	private final File storageFolder;
 	private final int maxFolders;
 	private final boolean enableJpeg;
+	private final boolean enableMotionDetection;
 	
 	private volatile Thread thread = null;
 	private volatile boolean killThread = false, reIndex = false;
 	
-	private volatile File tmpFileForceFirst = null;
-	private volatile Object tmpFileForceFirstLock = new Object();
+	private volatile Queue<String> tmpFileQueue = null;
+	private volatile Queue<List<Double>> tmpFileMotionQueue = null;
+	private volatile Object tmpFileQueueLock = new Object();
 	
 	private volatile byte[] lastJpeg = null;
-	private volatile String currentTmpFile = null;
+	
+	private volatile double currentMotionLevel = 0;
+	private volatile List<Double> motionLevelHistory = null;
 	
 	private volatile NewFileListener newFileListener = null;
 
-	public FileManager(File ffmpeg, File storageFolder, WebcamServer.Decoder fileDecoder, int maxFolders, int timelineQuality, boolean enableJpeg) {
+	public FileManager(File ffmpeg, File storageFolder, WebcamServer.Decoder fileDecoder, int maxFolders, int timelineQuality, boolean enableJpeg, boolean enableMotionDetection) {
 		this.ffmpegFileInfo = new FFmpegFileInfo(ffmpeg);
 		if(storageFolder != null) this.ffmpegFrameGrabber = new FFmpegFrameGrabber(ffmpeg, fileDecoder, timelineQuality);
 		else this.ffmpegFrameGrabber = null;
 		this.storageFolder = storageFolder;
 		this.maxFolders = maxFolders;
 		this.enableJpeg = enableJpeg;
+		this.enableMotionDetection = enableMotionDetection;
 	}
 	
 	public synchronized void setNewFileListener(NewFileListener newFileListener) {
 		this.newFileListener = newFileListener;
-	}
-	
-	public void timeChanged() {
-		synchronized (tmpFileForceFirstLock) {
-			tmpFileForceFirst = null;
-			if(storageFolder == null) return;
-			try {
-				LocalDateTime now = LocalDateTime.now();
-				File tmp = new File(storageFolder, "tmp");
-				List<File> tmpFiles = listFiles(tmp, TMP_FILE_PATTERN);
-				if(tmpFiles != null) {
-					DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
-					long maxDistance = -1;
-					for(File f : tmpFiles) {
-						LocalDateTime fileTime = LocalDateTime.from(formatter.parse(f.getName().subSequence(4, 23)));
-						long distance = Math.abs(ChronoUnit.SECONDS.between(now, fileTime));
-						if(distance > maxDistance) {
-							maxDistance = distance;
-							tmpFileForceFirst = f;
-						}
-					}
-				}
-			} catch (Exception e) {
-				WebcamServer.logger.printLogException(e);
-			}
-		}
 	}
 	
 	public synchronized void start() {
@@ -92,6 +71,12 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 			WebcamServer.logger.printLogLn(true, "Cleaning temporary folder");
 			deleteFolderContent(tmp);
 			
+			synchronized (tmpFileQueueLock) {
+				tmpFileQueue = new LinkedList<>();
+				tmpFileMotionQueue = new LinkedList<>();
+				motionLevelHistory = null;
+			}
+			
 			killThread = false;
 			thread = new Thread() {
 				public void run() {
@@ -101,8 +86,8 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 						while(!killThread) {
 							manageTask(false);
 
-							for(int i = 0; i < 100 && !killThread; i++) {
-								Thread.sleep(10);
+							for(int i = 0; i < 10 && !killThread; i++) {
+								Thread.sleep(100);
 							}
 						}
 
@@ -203,6 +188,10 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 		return null;
 	}
 	
+	public double getCurrentMotionLevel() {
+		return currentMotionLevel;
+	}
+	
 	public byte[] getLastJpeg() {
 		if(!enableJpeg) return null;
 		return lastJpeg;
@@ -215,7 +204,26 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 	
 	@Override
 	public void newTmpFile(String file) {
-		currentTmpFile = file;
+		if(file != null) {
+			synchronized (tmpFileQueueLock) {
+				tmpFileQueue.add(file);
+				if(motionLevelHistory != null) tmpFileMotionQueue.add(motionLevelHistory);
+				motionLevelHistory = new ArrayList<>();
+			}
+		}
+	}
+	
+	@Override
+	public void newMotionLevel(double motion) {
+		currentMotionLevel = motion;
+		synchronized (tmpFileQueueLock) {
+			if(motionLevelHistory != null) motionLevelHistory.add(motion);
+		}
+	}
+	
+	@Override
+	public void resetMotion() {
+		currentMotionLevel = 0;
 	}
 	
 	public void activateReIndex() {
@@ -224,53 +232,49 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 	
 	private void manageTask(boolean finalize) {
 		try {
-			synchronized (tmpFileForceFirstLock) {
-				File tmp = new File(storageFolder, "tmp");
-				List<File> tmpFiles = listFiles(tmp, TMP_FILE_PATTERN);
-				if(tmpFiles != null) {
-					if(tmpFileForceFirst != null) {
-						tmpFiles.add(0, tmpFileForceFirst);
-						for(int i = 1; i < tmpFiles.size(); i++) {
-							if(tmpFiles.get(i).getName().equals(tmpFileForceFirst.getName())) {
-								tmpFiles.remove(i);
-								break;
-							}
-						}
+			File tmpFile = null;
+			File tmpFolder = new File(storageFolder, "tmp");
+			List<Double> tmpMotionList = null;
+			synchronized (tmpFileQueueLock) {
+				if(tmpFileQueue.size() >= (finalize ? 1 : 2)) tmpFile = new File(tmpFolder, tmpFileQueue.peek());
+				if(tmpFileMotionQueue.isEmpty()) tmpMotionList = motionLevelHistory;
+				else tmpMotionList = tmpFileMotionQueue.peek();
+			}
+			if(tmpFile != null) {
+				Thread.sleep(500);
+				
+				if(tmpFile.exists()) {
+					File newFolder = new File(storageFolder, tmpFile.getName().substring(4, 14));
+					if(!newFolder.exists()) {
+						WebcamServer.logger.printLogLn(false, "Creating folder: " + newFolder.getName());
+						newFolder.mkdir();
 					}
-					while(tmpFiles.size() >= (finalize ? 1 : 2)) {
-						File tmpFile = tmpFiles.remove(0);
-						
-						Thread.sleep(500);
-						
-						String currentTmpFile = this.currentTmpFile;
-						if(!finalize && currentTmpFile != null && currentTmpFile.equals(tmpFile.getName())) {
-							WebcamServer.logger.printLogLn(true, "File " + tmpFile.getName() + " is locked");
-							return;
-						}
-						
-						tmpFileForceFirst = null;
-						
-						File newFolder = new File(storageFolder, tmpFile.getName().substring(4, 14));
-						if(!newFolder.exists()) {
-							WebcamServer.logger.printLogLn(false, "Creating folder: " + newFolder.getName());
-							newFolder.mkdir();
-						}
-						
-						File newFile = new File(newFolder, tmpFile.getName().substring(4));
-						
-						if(newFile.exists()) {
-							WebcamServer.logger.printLogLn(false, "File already exists: " + newFile.getName());
-							newFile = findNewFileName(newFolder, newFile.getName());
-							WebcamServer.logger.printLogLn(false, "Found new name: " + newFile.getName());
-						}
-						
-						WebcamServer.logger.printLogLn(true, "Moving file: " + newFile.getName());
-						Files.move(tmpFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-						
-						if(updateFileList(newFile, newFolder, true)) {
-							NewFileListener nfl = newFileListener;
-							if(nfl != null) nfl.newFile(newFile);
-						}
+					
+					File newFile = new File(newFolder, tmpFile.getName().substring(4));
+					
+					if(newFile.exists()) {
+						WebcamServer.logger.printLogLn(false, "File already exists: " + newFile.getName());
+						newFile = findNewFileName(newFolder, newFile.getName());
+						WebcamServer.logger.printLogLn(false, "Found new name: " + newFile.getName());
+					}
+					
+					WebcamServer.logger.printLogLn(true, "Moving file: " + newFile.getName());
+					Files.move(tmpFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+					
+					synchronized (tmpFileQueueLock) {
+						tmpFileQueue.remove();
+						if(!tmpFileMotionQueue.isEmpty()) tmpFileMotionQueue.remove();
+					}
+					
+					if(updateFileList(newFile, newFolder, true)) {
+						if(enableMotionDetection) updateMotionList(newFile, newFolder, tmpMotionList);
+						if(newFileListener != null) newFileListener.newFile(newFile);
+					}
+				}
+				else {
+					synchronized (tmpFileQueueLock) {
+						tmpFileQueue.remove();
+						if(!tmpFileMotionQueue.isEmpty()) tmpFileMotionQueue.remove();
 					}
 				}
 			}
@@ -331,6 +335,63 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 		}
 	}
 	
+	private void updateMotionList(File file, File folder, List<Double> motionList) {
+		try {
+			File fileList = new File(folder, FILE_MOTION_LIST_NAME);
+			RandomAccessFile raf = new RandomAccessFile(fileList, "rw");
+			
+			try {
+				if(raf.length() < 3) raf.writeBytes("{\r\n");
+				else {
+					raf.seek(raf.length() - 3);
+					if(raf.readByte() == '\r' && raf.readByte() == '\n' && raf.readByte() == '}') {
+						raf.seek(raf.length() - 3);
+						raf.writeBytes(",\r\n");
+					}
+					else {
+						WebcamServer.logger.printLogLn(false, "Video motion list for directory " + folder.getName() + " is corrupted");
+						long i = raf.length() - 3;
+						while(i >= 0) {
+							raf.seek(i);
+							byte b1 = raf.readByte();
+							byte b2 = raf.readByte();
+							byte b3 = raf.readByte();
+							if(b1 == ',' && b2 == '\r' && b3 == '\n') break;
+							if(b1 == ']' && b2 == '\r' && b3 == '\n') {
+								i++;
+								break;
+							}
+							i--;
+						}
+						if(i < 10) {
+							raf.seek(0);
+							raf.setLength(0);
+							raf.writeBytes("{\r\n");
+						}
+						else {
+							raf.setLength(i);
+							raf.writeBytes(",\r\n");
+						}
+					}
+				}
+				raf.writeBytes("\t\"" + file.getName() + "\":[");
+				if(motionList != null) {
+					for(int i = 0; i < motionList.size(); i++) {
+						raf.writeBytes(String.format("%.6f", motionList.get(i)));
+						if(i < motionList.size() - 1) raf.writeBytes(",");
+					}
+				}
+				raf.writeBytes("]\r\n}");
+			} catch (Exception e) {
+				WebcamServer.logger.printLogException(e);
+			}
+			
+			if(raf != null) raf.close();
+		} catch (Exception e) {
+			WebcamServer.logger.printLogException(e);
+		}
+	}
+	
 	private boolean updateFileList(File file, File folder, boolean deleteIfEmpty) {
 		boolean retVal = false;
 		try {
@@ -372,6 +433,7 @@ public class FileManager implements JpegListener, NewTmpFileListener {
 							}
 							if(i <= 12) {
 								raf.seek(0);
+								raf.setLength(0);
 								raf.writeBytes("{\"files\":[\r\n");
 							}
 							else {
