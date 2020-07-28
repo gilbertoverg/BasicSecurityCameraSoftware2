@@ -101,7 +101,11 @@
         .controlDiv button {
             color: #000000;
             background-color: #D0D0D0;
-            width: 100px;
+            width: 66px;
+        }
+
+        #speedList {
+            width: 68px;
         }
 
         .controlDiv button:disabled {
@@ -159,7 +163,10 @@
                 width: 100%;
             }
             .controlDiv button {
-                width: 50%;
+                width: 40%;
+            }
+            #speedList {
+                width: 20%;
             }
             .contentDiv {
                 height: calc(100% - 150px);
@@ -188,6 +195,18 @@
         </select>
         <div class="controls">
             <button type="button" id="prevButton" disabled>&lt; Prev</button>
+            <select id="speedList">
+                <option value="0.1">0.1x</option>
+                <option value="0.2">0.2x</option>
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="2">2x</option>
+                <option value="5">5x</option>
+                <option value="10">10x</option>
+                <option value="20">20x</option>
+                <option value="50">50x</option>
+                <option value="100">100x</option>
+            </select>
             <button type="button" id="nextButton" disabled>Next &gt;</button>
         </div>
     </div>
@@ -200,6 +219,7 @@
         var height = 240;
         var folderRequest = new XMLHttpRequest();
         var fileRequest = new XMLHttpRequest();
+        var videoSpeed = 1;
 
         function updateLayout() {
             var elem = document.getElementById("contentDiv");
@@ -313,6 +333,7 @@
                     video.setAttribute("src", "/data/file?folder=" + folder + "&file=" + file);
                     video.setAttribute("type", "video/mp4");
                     video.load();
+                    video.playbackRate = videoSpeed;
                 }
             }
         };
@@ -323,6 +344,13 @@
                 selectList.selectedIndex = selectList.selectedIndex - 1;
                 loadVideo();
             }
+        };
+
+        function changeSpeed() {
+            var selectList = document.getElementById("speedList");
+            videoSpeed = parseFloat(selectList.value);
+            var video = document.getElementById("video");
+            video.playbackRate = videoSpeed;
         };
 
         function nextFile() {
@@ -373,6 +401,7 @@
                     document.getElementById("folderList").addEventListener("change", loadFiles);
                     document.getElementById("fileList").addEventListener("change", loadVideo);
                     document.getElementById("prevButton").addEventListener("click", prevFile);
+                    document.getElementById("speedList").addEventListener("change", changeSpeed);
                     document.getElementById("nextButton").addEventListener("click", nextFile);
                     document.getElementById("video").addEventListener("ended", nextFile);
                     document.getElementById("download").addEventListener("click", download);
