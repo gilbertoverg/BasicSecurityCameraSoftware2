@@ -123,7 +123,7 @@
         .rangeDiv .slider {
             visibility: hidden;
             -webkit-appearance: none;
-            background: #909090;
+            background: rgba(0, 0, 0, 0);
             outline: none;
             border-radius: 0;
             cursor: pointer;
@@ -136,7 +136,7 @@
             appearance: none;
             border: none;
             border-radius: 0;
-            background: #037700;
+            background: rgba(3, 119, 0, 0.5);
             width: 40px;
             height: 40px;
         }
@@ -144,13 +144,22 @@
         .rangeDiv .slider::-moz-range-thumb {
             border: none;
             border-radius: 0;
-            background: #037700;
+            background: rgba(3, 119, 0, 0.5);
             width: 40px;
             height: 40px;
         }
 
+        .rangeDiv canvas {
+            position: absolute;
+            z-index: -1;
+            top: 0;
+            left: 20px;
+            width: calc(100% - 40px);
+            height: 100%;
+        }
+
         .rangeDiv .cover {
-            background-color: #909090;
+            background-color: #505050;
             position: absolute;
             z-index: 1;
             top: 0;
@@ -191,7 +200,7 @@
             width: 100%;
             height: 100%;
         }
-        
+
         .contentDiv p {
             visibility: hidden;
             display: block;
@@ -273,6 +282,7 @@
         </div>
     </div>
     <div class="rangeDiv">
+        <canvas id="motionCanvas"></canvas>
         <input type="range" class="slider" id="range" min="0" max="0" value="0" disabled>
         <div class="cover" id="cover"></div>
         <span class="tooltipText" id="tooltip">No day chosen</span>
@@ -291,14 +301,85 @@
         var prevFileLoaded = null;
         var prevTimeLoaded = null;
         var files = [];
+        var motionProcessed = [];
         var folderRequest = new XMLHttpRequest();
+        var motionRequest = new XMLHttpRequest();
         var fileRequest = new XMLHttpRequest();
+
+        function mapVar(x, in_min, in_max, out_min, out_max) {
+            return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+        };
 
         function updateLayout() {
             var elem = document.getElementById("contentDiv");
             var ratio = Math.min(elem.getBoundingClientRect().width / width, elem.getBoundingClientRect().height / height);
             document.getElementById("canvas").style.width = Math.floor(ratio * width) + "px";
             document.getElementById("canvas").style.height = Math.floor(ratio * height) + "px";
+            updateMotionCanvas();
+        };
+
+        function updateMotionCanvas() {
+            var elem = document.getElementById("motionCanvas");
+            var ctx = elem.getContext("2d");
+            elem.height = 40;
+            if (motionProcessed.length > 0) {
+                if (motionProcessed.length <= elem.getBoundingClientRect().width) {
+                    elem.width = motionProcessed.length;
+                    ctx.fillStyle = "#505050";
+                    ctx.fillRect(0, 0, elem.width, elem.height);
+                    ctx.fillStyle = "#FFFFFF";
+                    var min = motionProcessed[0];
+                    var max = motionProcessed[0];
+                    for (var i = 1; i < motionProcessed.length; i++) {
+                        if (motionProcessed[i] < min) {
+                            min = motionProcessed[i];
+                        }
+                        if (motionProcessed[i] > max) {
+                            max = motionProcessed[i];
+                        }
+                    }
+                    for (var i = 0; i < motionProcessed.length && i <= elem.width; i++) {
+                        var h = mapVar(motionProcessed[i], min, max, 0, elem.getBoundingClientRect().height);
+                        ctx.fillRect(i, elem.getBoundingClientRect().height - h, 1, h);
+                    }
+                }
+                else {
+                    elem.width = elem.getBoundingClientRect().width;
+                    ctx.fillStyle = "#505050";
+                    ctx.fillRect(0, 0, elem.width, elem.height);
+                    ctx.fillStyle = "#FFFFFF";
+                    var motionTmp = [];
+                    for (var dst = 0, src = 0; src < motionProcessed.length && dst < elem.width; dst++) {
+                        var max = motionProcessed[src];
+                        while (src < motionProcessed.length * dst / (elem.width + 1)) {
+                            if (motionProcessed[src] > max) {
+                                max = motionProcessed[src];
+                            }
+                            src++;
+                        }
+                        motionTmp.push(max);
+                    }
+                    var min = motionTmp[0];
+                    var max = motionTmp[0];
+                    for (var i = 1; i < motionTmp.length; i++) {
+                        if (motionTmp[i] < min) {
+                            min = motionTmp[i];
+                        }
+                        if (motionTmp[i] > max) {
+                            max = motionTmp[i];
+                        }
+                    }
+                    for (var i = 0; i < motionTmp.length && i <= elem.width; i++) {
+                        var h = mapVar(motionTmp[i], min, max, 0, elem.getBoundingClientRect().height);
+                        ctx.fillRect(i, elem.getBoundingClientRect().height - h, 1, h);
+                    }
+                }
+            }
+            else {
+                elem.width = elem.getBoundingClientRect().width;
+                ctx.fillStyle = "#505050";
+                ctx.fillRect(0, 0, elem.width, elem.height);
+            }
         };
 
         function showText(text, color) {
@@ -391,6 +472,35 @@
             folderRequest.send();
         };
 
+        function loadMotionList() {
+            motionRequest.abort();
+
+            motionProcessed = [];
+            var folder = document.getElementById("folderList").value;
+            var max = parseInt(document.getElementById("range").max);
+
+            motionRequest = new XMLHttpRequest();
+            motionRequest.onload = function() {
+                if (motionRequest.status == 200) {
+                    var json = JSON.parse(motionRequest.responseText);
+                    for (var i = 0; i < files.length && files[i]; i++) {
+                        if (files[i].duration && files[i].fps) {
+                            var jsonMotion = json[files[i].name] || [];
+                            for (var d = 0; d < jsonMotion.length && motionProcessed.length < max; d++) {
+                                motionProcessed.push(jsonMotion[d]);
+                            }
+                        }
+                    }
+                    while (motionProcessed.length < max) {
+                        motionProcessed.push(0);
+                    }
+                    updateMotionCanvas();
+                }
+            };
+            motionRequest.open("GET", "/data/fileMotionList?folder=" + folder, true);
+            motionRequest.send();
+        };
+
         function loadFiles() {
             fileRequest.abort();
 
@@ -416,6 +526,8 @@
             document.getElementById("nextOneMinute").disabled = true;
 
             files = [];
+            motionProcessed = [];
+            updateMotionCanvas();
 
             if (document.getElementById("folderList").selectedIndex > 0) {
                 var folder = document.getElementById("folderList").value;
@@ -455,6 +567,7 @@
 
                         imgEnable = true;
                         loadFrame();
+                        loadMotionList();
                     }
                 };
                 fileRequest.open("GET", "/data/fileList?folder=" + folder, true);
